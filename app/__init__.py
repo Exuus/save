@@ -1,5 +1,5 @@
 # third-party imports
-from flask import Flask, g
+from flask import Flask, g, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_bcrypt import Bcrypt
@@ -27,8 +27,8 @@ def create_app(config_name):
     migrate = Migrate(app, db)
 
     from app import models
-    from .api_v1 import user as user_blueprint
-    app.register_blueprint(user_blueprint, url_prefix='/v1/users')
+    from .api_v1 import api as api_blueprint
+    app.register_blueprint(api_blueprint, url_prefix='/v1')
 
     # register an after request handler
     @app.after_request
@@ -47,6 +47,7 @@ def create_app(config_name):
     @json
     def get_auth_token():
         return {'token': g.user.generate_auth_token()}
+
 
     return app
 
