@@ -1,7 +1,8 @@
-from . import user
+from . import api
 from flask import jsonify, request
 
 
-@user.route('/', methods=['GET'])
+@api.route('/users/', methods=['GET'])
 def get_users():
-    return jsonify({'user':'Remy'})
+    return jsonify({'user':'Remyoooo'})
+
