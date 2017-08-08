@@ -54,8 +54,9 @@ class User(db.Model):
     username = db.Column(db.String(64), index=True, unique=True)
     password_hash = db.Column(db.String(128))
     name = db.Column(db.String(128))
-    email = db.Column(db.String(60))
-    phone = db.Column(db.String(30))
+    email = db.Column(db.String(60), unique=True)
+    phone = db.Column(db.String(30), unique=True)
+    type = db.Column(db.Integer)
     date = db.Column(db.DateTime, default=datetime.now)
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), index=True)
 
