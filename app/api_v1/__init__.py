@@ -20,4 +20,4 @@ def after_request(rv):
     return rv
 
 
-from . import users
+from . import users, organizations
