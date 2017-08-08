@@ -6,8 +6,8 @@ from ..decorators import json, paginate, no_cache
 
 
 @api.route('/organizations/', methods=['GET'])
-@json
 @no_cache
+@json
 @paginate('organizations')
 def get_organizations():
     return Organization.query
