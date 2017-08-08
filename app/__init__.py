@@ -6,6 +6,7 @@ from flask_bcrypt import Bcrypt
 from flask_cors import CORS
 from flask_mail import Mail
 from .decorators import json, no_cache, rate_limit
+from .errorhandlers import bad_request, forbidden, not_found, method_not_supported
 
 # local imports
 from config import app_config
@@ -29,6 +30,13 @@ def create_app(config_name):
     from app import models
     from .api_v1 import api as api_blueprint
     app.register_blueprint(api_blueprint, url_prefix='/v1')
+
+    # register errors handlers
+
+    app.register_error_handler(400, bad_request)
+    app.register_error_handler(403, forbidden)
+    app.register_error_handler(404, not_found)
+    app.register_error_handler(405, method_not_supported)
 
     # register an after request handler
     @app.after_request
