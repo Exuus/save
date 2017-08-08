@@ -51,7 +51,7 @@ class Organization(db.Model):
 class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(64), index=True)
+    username = db.Column(db.String(64), index=True, unique=True)
     password_hash = db.Column(db.String(128))
     name = db.Column(db.String(128))
     email = db.Column(db.String(60))
@@ -69,6 +69,31 @@ class User(db.Model):
         s = Serializer(current_app.config['SECRET_KEY'], expires_in=expires_in)
         return s.dumps({'id': self.id}).decode('utf-8')
 
+    def get_url(self):
+        return url_for('api.get_user', id=self.id, _external=True)
+
+    def export_data(self):
+        return {
+            'self_url': self.get_url(),
+            'username': self.username,
+            'name': self.name,
+            'email': self.email,
+            'phone': self.phone,
+            'date': self.date,
+            'organization_url': url_for('api.get_organization', id=self.id, _external=True)
+        }
+
+    def import_data(self, data):
+        try:
+            self.username = data['username'],
+            self.name = data['name'],
+            self.email = data['email'],
+            self.phone = data['phone']
+        except KeyError as e:
+            raise ValidationError('Invalid order: missing ' + e.args[0])
+
+        return self
+
     @staticmethod
     def verify_auth_token(token):
         s = Serializer(current_app.config['SECRET_KEY'])
@@ -77,28 +102,3 @@ class User(db.Model):
         except:
             return None
         return User.query.get(data['id'])
-
-    def get_url(self):
-        return url_for('api.get_organization', id=self.id, _external=True)
-
-    def export_data(self):
-        return {
-            'username': self.username,
-            'name': self.name,
-            'email': self.email,
-            'phone': self.phone,
-            'date': self.date.isoformat(),
-            'organization_url': self.customer.get_url()
-        }
-
-    def import_data(self, data):
-        try:
-            self.username = data['username'],
-            self.name = data['name'],
-            self.password_hash = self.set_password(data['passowrd']),
-            self.email = self.email,
-            self.phone = self.phone
-        except KeyError as e:
-            raise ValidationError('Invalid order: missing ' + e.args[0])
-
-        return self
