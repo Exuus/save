@@ -62,6 +62,7 @@ class User(db.Model):
     date = db.Column(db.DateTime, default=datetime.utcnow())
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), index=True)
     project = db.relationship('Project', backref='users', lazy='dynamic')
+    intervention = db.relationship('InterventionArea', backref='users', lazy='dynamic')
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -119,6 +120,7 @@ class Project(db.Model):
     date = db.Column(db.DateTime, default=datetime.utcnow())
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), index=True)
+    intervention = db.relationship('InterventionArea', backref='project', lazy='dynamic')
 
     def get_url(self):
         return url_for('api.get_project', id=self.id, _external=True)
@@ -149,8 +151,44 @@ class Project(db.Model):
         return self
 
 
-class ProjectInterventionArea(db.Model):
-    __tablename__ = 'project_intervention_area'
+class InterventionArea(db.Model):
+    __tablename__ = 'intervention_area'
     id = db.Column(db.Integer, primary_key=True)
+    village_id = db.Column(db.Integer, db.ForeignKey('village.id'), index=True)
+    project_id = db.Column(db.Integer, db.ForeignKey('project.id'), index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
+
+    def get_url(self):
+        return url_for('api.get_intervention_area', id=self.id, _external=True)
+
+    def export_data(self):
+        pass
+
+    def import_data(self,data):
+        pass
 
 
+class Village(db.Model):
+    __tablename__ = 'village'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50))
+    code = db.Column(db.String(20))
+    intervention = db.relationship('InterventionArea', backref='village', lazy='dynamic')
+
+    def get_url(self):
+        return url_for('api.get_village', id=self.id, _external=True)
+
+    def export_data(self):
+        return {
+            'self_url':self.url,
+            'name': self.name,
+            'code': self.code
+        }
+
+    def import_date(self,data):
+        try:
+            self.name = data['name'],
+            self.code = data['code'],
+        except KeyError as e:
+            raise ValidationError('Invalid order: missing ' + e.args[0])
+        return self
