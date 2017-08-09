@@ -18,8 +18,9 @@ class Organization(db.Model):
     phone = db.Column(db.String(30))
     address = db.Column(db.String(180))
     country = db.Column(db.String(120))
-    date = db.Column(db.DateTime, default=datetime.now)
+    date = db.Column(db.DateTime, default=datetime.utcnow())
     users = db.relationship('User', backref='organization', lazy='dynamic')
+    project = db.relationship('Project', backref='organization', lazy='dynamic')
 
     def get_url(self):
         return url_for('api.get_organization', id=self.id, _external=True)
@@ -58,7 +59,7 @@ class User(db.Model):
     email = db.Column(db.String(60), unique=True)
     phone = db.Column(db.String(30), unique=True)
     type = db.Column(db.Integer) # 0 Super Admin | 1 Admin | 2 Agent | 3 Member
-    date = db.Column(db.DateTime, default=datetime.now)
+    date = db.Column(db.DateTime, default=datetime.utcnow())
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), index=True)
     project = db.relationship('Project', backref='users', lazy='dynamic')
 
@@ -115,15 +116,37 @@ class Project(db.Model):
     end = db.Column(db.Date)
     budget = db.Column(db.Float)
     donor = db.Column(db.String(240))
+    date = db.Column(db.DateTime, default=datetime.utcnow())
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), index=True)
 
     def get_url(self):
         return url_for('api.get_project', id=self.id, _external=True)
 
     def export_data(self):
         return {
-            'name': self.name
+            'self_url': self.get_url(),
+            'name': self.name,
+            'start': self.start,
+            'end': self.end,
+            'budget': self.budget,
+            'donor': self.donor,
+            'date': self.date,
+            'user_id': self.user_id,
+            'organization_url': self.organization.get_url()
         }
+
+    def import_data(self, data):
+        try:
+            self.name = data['name'],
+            self.start = data['start'],
+            self.end = data['end'],
+            self.budget = data['budget'],
+            self.donor = data['donor'],
+            self.user_id = data['user_id']
+        except KeyError as e:
+            raise ValidationError('Invalid order: missing ' + e.args[0])
+        return self
 
 
 class ProjectInterventionArea(db.Model):
