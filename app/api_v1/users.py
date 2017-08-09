@@ -14,11 +14,21 @@ def get_users():
 
 
 @api.route('/users/<int:id>', methods=['GET'])
+@json
 def get_user(id):
     return User.query.get_or_404(id)
 
 
-@api.route('/organization/<int:id>/users/', methods=['POST'])
+@api.route('/organizations/<int:id>/users/', methods=['GET'])
+@json
+@paginate('users')
+def get_organization_users(id):
+    organization = Organization.query.get_or_404(id)
+    return organization.users
+
+
+@api.route('/organizations/<int:id>/users/', methods=['POST'])
+@json
 def new_user(id):
     organization = Organization.query.get_or_404(id)
     user = User(organization=organization)
