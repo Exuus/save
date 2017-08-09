@@ -32,7 +32,8 @@ class Organization(db.Model):
             'email': self.email,
             'phone': self.phone,
             'address': self.address,
-            'country': self.country
+            'country': self.country,
+            'users_url': url_for('api.get_organization_users', id=self.id, _external=True)
         }
 
     def import_data(self, data):
@@ -56,9 +57,10 @@ class User(db.Model):
     name = db.Column(db.String(128))
     email = db.Column(db.String(60), unique=True)
     phone = db.Column(db.String(30), unique=True)
-    type = db.Column(db.Integer)
+    type = db.Column(db.Integer) # 0 Super Admin | 1 Admin | 2 Agent | 3 Member
     date = db.Column(db.DateTime, default=datetime.now)
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), index=True)
+    project = db.relationship('Project', backref='users', lazy='dynamic')
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -81,7 +83,7 @@ class User(db.Model):
             'email': self.email,
             'phone': self.phone,
             'date': self.date,
-            'organization_url': url_for('api.get_organization', id=self.id, _external=True)
+            'organization_url': self.organization.get_url()
         }
 
     def import_data(self, data):
@@ -103,3 +105,29 @@ class User(db.Model):
         except:
             return None
         return User.query.get(data['id'])
+
+
+class Project(db.Model):
+    __tablename__ = 'project'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100))
+    start = db.Column(db.Date)
+    end = db.Column(db.Date)
+    budget = db.Column(db.Float)
+    donor = db.Column(db.String(240))
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
+
+    def get_url(self):
+        return url_for('api.get_project', id=self.id, _external=True)
+
+    def export_data(self):
+        return {
+            'name': self.name
+        }
+
+
+class ProjectInterventionArea(db.Model):
+    __tablename__ = 'project_intervention_area'
+    id = db.Column(db.Integer, primary_key=True)
+
+
