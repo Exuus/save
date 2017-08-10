@@ -34,7 +34,9 @@ class Organization(db.Model):
             'phone': self.phone,
             'address': self.address,
             'country': self.country,
-            'users_url': url_for('api.get_organization_users', id=self.id, _external=True)
+            'agents_url': url_for('api.get_organization_agents', id=self.id, _external=True),
+            'members_url': url_for('api.get_organization_members', id=self.id, _external=True),
+            'projects_url': url_for('api.get_organization_projects', id=self.id, _external=True)
         }
 
     def import_data(self, data):
@@ -85,7 +87,9 @@ class User(db.Model):
             'email': self.email,
             'phone': self.phone,
             'date': self.date,
-            'organization_url': self.organization.get_url()
+            'type': self.type,
+            'organization_url': self.organization.get_url(),
+            'projects_url': url_for('api.get_users_projects', id=self.id, _external=True)
         }
 
     def import_data(self, data):
@@ -93,7 +97,8 @@ class User(db.Model):
             self.username = data['username'],
             self.name = data['name'],
             self.email = data['email'],
-            self.phone = data['phone']
+            self.phone = data['phone'],
+            self.type = data['type']
         except KeyError as e:
             raise ValidationError('Invalid order: missing ' + e.args[0])
 
