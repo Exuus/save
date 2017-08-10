@@ -19,12 +19,20 @@ def get_user(id):
     return User.query.get_or_404(id)
 
 
-@api.route('/organizations/<int:id>/users/', methods=['GET'])
+@api.route('/organizations/<int:id>/agents/', methods=['GET'])
 @json
-@paginate('users')
-def get_organization_users(id):
+@paginate('agents')
+def get_organization_agents(id):
     organization = Organization.query.get_or_404(id)
-    return organization.users
+    return organization.users.filter_by(type=2)
+
+
+@api.route('/organizations/<int:id>/members/', methods=['GET'])
+@json
+@paginate('members')
+def get_organization_members(id):
+    organization = Organization.query.get_or_404(id)
+    return organization.users.filter_by(type=3)
 
 
 @api.route('/organizations/<int:id>/users/', methods=['POST'])
