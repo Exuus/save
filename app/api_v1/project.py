@@ -1,7 +1,7 @@
 from flask import request
 from . import api
 from .. import db
-from ..models import Project, Organization
+from ..models import Project, Organization, User
 from ..decorators import json, paginate, no_cache
 
 
@@ -14,9 +14,17 @@ def get_project(id):
 @api.route('/organizations/<int:id>/projects/', methods=['GET'])
 @json
 @paginate('projects')
-def get_organization_project(id):
+def get_organization_projects(id):
     organization = Organization.query.get_or_404(id)
     return organization.project
+
+
+@api.route('/users/<int:id>/projects/', methods=['GET'])
+@json
+@paginate('projects')
+def get_users_projects(id):
+    user = User.query.get_or_404(id)
+    return user.project
 
 
 @api.route('/organizations/<int:id>/projects/', methods=['POST'])
