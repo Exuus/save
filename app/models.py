@@ -1,6 +1,4 @@
 from datetime import datetime
-from dateutil import parser as datetime_parser
-from dateutil.tz import tzutc
 from werkzeug.security import generate_password_hash, check_password_hash
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from flask import url_for, current_app
@@ -28,6 +26,7 @@ class Organization(db.Model):
     def export_data(self):
         return {
             'self_url': self.get_url(),
+            'id': self.id,
             'name': self.name,
             'type': self.type,
             'email': self.email,
@@ -88,7 +87,6 @@ class User(db.Model):
             'phone': self.phone,
             'date': self.date,
             'type': self.type,
-            'organization_url': self.organization.get_url(),
             'projects_url': url_for('api.get_users_projects', id=self.id, _external=True)
         }
 
@@ -140,7 +138,8 @@ class Project(db.Model):
             'donor': self.donor,
             'date': self.date,
             'user_id': self.user_id,
-            'organization_url': self.organization.get_url()
+            'organization_url': self.organization.get_url(),
+            'intervention_url': url_for('api.get_project_intervention_area', id=self.id, _external=True)
         }
 
     def import_data(self, data):
@@ -167,9 +166,14 @@ class InterventionArea(db.Model):
         return url_for('api.get_intervention_area', id=self.id, _external=True)
 
     def export_data(self):
-        pass
+        return {
+            'self_url': self.get_url(),
+            'village_url': self.village.get_url(),
+            'project_url': self.project.get_url(),
+            'user_url': self.user.get_url()
+        }
 
-    def import_data(self,data):
+    def import_data(self, data):
         pass
 
 
