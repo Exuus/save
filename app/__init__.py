@@ -56,7 +56,6 @@ def create_app(config_name):
     def get_auth_token():
         return {'token': g.user.generate_auth_token()}
 
-
     return app
 
 
