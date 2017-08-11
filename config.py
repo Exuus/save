@@ -29,7 +29,7 @@ class TestConfig(Config):
     Test Configurations
     """
 
-    SQLALCHEMY_DATABASE_URI = 'postgresql://postgres:no_pass@localhost/save_test'
+    SQLALCHEMY_DATABASE_URI = 'postgresql://postgres:129083save909@localhost/save_test'
     SQLALCHEMY_ECHO = True
 
 
