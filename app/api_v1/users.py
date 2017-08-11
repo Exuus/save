@@ -46,3 +46,13 @@ def new_user(id):
     db.session.commit()
     return {}, 201, {'Location': user.get_url()}
 
+
+@api.route('/users/<int:id>', methods=['PUT'])
+@json
+def edit_users(id):
+    user = User.query.get_or_404(id)
+    user.import_data(request.json)
+    db.session.add(user)
+    db.session.commit()
+    return {}
+
