@@ -11,7 +11,7 @@ def get_intervention_area(id):
     return InterventionArea.query.get_or_404(id)
 
 
-@api.route('/projects/<int:id>/intervention/', methods=['GET'])
+@api.route('/projects/<int:id>/interventions/', methods=['GET'])
 @json
 @paginate('intervention_area')
 def get_project_intervention_area(id):
@@ -19,14 +19,23 @@ def get_project_intervention_area(id):
     return project.intervention
 
 
-@api.route('/project/<int:id>/user/<int:user_id>/intervention', methods=['POST'])
+@api.route('/projects/<int:id>/intervention/', methods=['POST'])
 @json
-def new_intervention(id, user_id):
+def new_intervention(id):
     project = Project.query.get_or_404(id)
-    user = User.query.get_or_404(user_id)
-    intervention = InterventionArea(project=project, user=user)
+    intervention = InterventionArea(project=project)
     intervention.import_data(request.json)
     db.session.add(intervention)
     db.session.commit()
 
     return {}, 201, {'Location': intervention.get_url()}
+
+
+@api.route('/interventions/<int:id>')
+@json
+def edit_invention(id):
+    intervention = InterventionArea.query.get_or_404(id)
+    intervention.import_data(request.json)
+    db.session.add(intervention)
+    db.session.commit()
+    return {}
