@@ -81,6 +81,7 @@ class User(db.Model):
     def export_data(self):
         return {
             'self_url': self.get_url(),
+            'id': self.id,
             'username': self.username,
             'name': self.name,
             'email': self.email,
@@ -138,8 +139,8 @@ class Project(db.Model):
             'donor': self.donor,
             'date': self.date,
             'user_id': self.user_id,
-            'organization_url': self.organization.get_url(),
-            'intervention_url': url_for('api.get_project_intervention_area', id=self.id, _external=True)
+            'organization_url': self.organization.get_url()
+            #'intervention_url': url_for('api.get_project_intervention_area', id=self.id, _external=True)
         }
 
     def import_data(self, data):
@@ -158,6 +159,7 @@ class Project(db.Model):
 class InterventionArea(db.Model):
     __tablename__ = 'intervention_area'
     id = db.Column(db.Integer, primary_key=True)
+    date = db.Column(db.DateTime, default=datetime.utcnow())
     village_id = db.Column(db.Integer, db.ForeignKey('village.id'), index=True)
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'), index=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
@@ -168,13 +170,19 @@ class InterventionArea(db.Model):
     def export_data(self):
         return {
             'self_url': self.get_url(),
-            'village_url': self.village.get_url(),
+            'date': self.date,
+            'village_id': self.village_id,
             'project_url': self.project.get_url(),
-            'user_url': self.user.get_url()
+            'user_id': self.user_id
         }
 
     def import_data(self, data):
-        pass
+        try:
+            self.village_id = data['village_id'],
+            self.user_id = data['user_id'],
+        except KeyError as e:
+            raise ValidationError('Invalid order: missing ' + e.args[0])
+        return self
 
 
 class Village(db.Model):
@@ -189,12 +197,12 @@ class Village(db.Model):
 
     def export_data(self):
         return {
-            'self_url':self.url,
+            'self_url':self.get_url(),
             'name': self.name,
             'code': self.code
         }
 
-    def import_date(self,data):
+    def import_data(self,data):
         try:
             self.name = data['name'],
             self.code = data['code'],
