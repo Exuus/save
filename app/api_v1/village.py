@@ -20,6 +20,7 @@ def get_village(id):
 
 
 @api.route('/villages/', methods=['POST'])
+@json
 def new_village():
     village = Village()
     village.import_data(request.json)
