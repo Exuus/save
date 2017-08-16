@@ -39,7 +39,7 @@ def new_intervention(id):
     return {}, 201, {'Location': intervention.get_url()}
 
 
-@api.route('/interventions/<int:id>')
+@api.route('/interventions/<int:id>', methods=['PUT'])
 @json
 def edit_invention(id):
     intervention = InterventionArea.query.get_or_404(id)
