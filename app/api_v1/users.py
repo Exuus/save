@@ -47,6 +47,18 @@ def new_user(id):
     return {}, 201, {'Location': user.get_url()}
 
 
+@api.route('/users/confirmation/', methods=['POST'])
+@json
+def user_confirmation_code():
+    data = request.json
+    user = User.query.\
+        filter(User.email == data['email'], User.confirmation_code == data['code']).\
+        first()
+    if user:
+        return user
+    return {}, 404
+
+
 @api.route('/users/<int:id>', methods=['PUT'])
 @json
 def edit_users(id):
