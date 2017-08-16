@@ -2,6 +2,7 @@ from flask.globals import _app_ctx_stack, _request_ctx_stack
 from werkzeug.urls import url_parse
 from werkzeug.exceptions import NotFound
 from .exceptions import ValidationError
+import random
 
 
 def split_url(url, method='GET'):
@@ -32,3 +33,8 @@ def split_url(url, method='GET'):
     except NotFound:
         raise ValidationError('Invalid URL: ' + url)
     return result
+
+
+def generate_code():
+    code = '-'.join(map(str, random.sample(range(1, 1000), 3)))
+    return code
