@@ -239,7 +239,7 @@ class Village(db.Model):
     __tablename__ = 'village'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50))
-    code = db.Column(db.String(20))
+    code = db.Column(db.String(20), unique=True)
     intervention = db.relationship('InterventionArea', backref='village', lazy='dynamic')
 
     def get_url(self):
