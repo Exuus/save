@@ -60,7 +60,7 @@ class User(db.Model):
     email = db.Column(db.String(60), unique=True)
     phone = db.Column(db.String(30), unique=True)
     secondary_phone = db.Column(db.String(30), unique=True)
-    type = db.Column(db.Integer) # 0 Super Admin | 1 Admin | 2 Agent | 3 Member
+    type = db.Column(db.Integer) # 0 Super Admin | 1 Admin | 2 Agent | 3 Member | 4 developer account
     date = db.Column(db.DateTime, default=datetime.utcnow())
     birth_date = db.Column(db.Date)
     gender = db.Column(db.Integer)  # 0 Male # 1 Female
