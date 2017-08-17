@@ -47,6 +47,18 @@ def new_user(id):
     return {}, 201, {'Location': user.get_url()}
 
 
+@api.route('/login/', methods=['POST'])
+@json
+def user_login():
+    data = request.json
+    user = User.query.\
+        filter((User.email == data['username']) | (User.phone == data['username']) | (User.username == data['username'])).\
+        first()
+    if user.verify_password(data['password']):
+        return user
+    return {}, 404
+
+
 @api.route('/users/confirmation/', methods=['POST'])
 @json
 def user_confirmation_code():
