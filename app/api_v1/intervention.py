@@ -19,14 +19,6 @@ def get_project_intervention_area(id):
     return project.intervention
 
 
-@api.route('/agents/<int:id>/projects/interventions/', methods=['GET'])
-@json
-@paginate('agent_project')
-def get_agent_project(id):
-    user = User.query.get_or_404(id)
-    return user.intervention
-
-
 @api.route('/projects/<int:id>/intervention/', methods=['POST'])
 @json
 def new_intervention(id):
