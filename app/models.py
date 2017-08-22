@@ -19,6 +19,7 @@ class Organization(db.Model):
     date = db.Column(db.DateTime, default=datetime.utcnow())
     users = db.relationship('User', backref='organization', lazy='dynamic')
     project = db.relationship('Project', backref='organization', lazy='dynamic')
+    saving_group = db.relationship('SavingGroup', backref='organization', lazy='dynamic')
 
     def get_url(self):
         return url_for('api.get_organization', id=self.id, _external=True)
@@ -70,8 +71,9 @@ class User(db.Model):
     confirmation_code = db.Column(db.String(12), default=generate_code())
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), index=True)
     project = db.relationship('Project', backref='users', lazy='dynamic')
-    intervention = db.relationship('InterventionArea', backref='users', lazy='dynamic')
     financial = db.relationship('UserFinDetails', backref='users', lazy='dynamic')
+    project_agent = db.relationship('ProjectAgent', backref='users', lazy='dynamic')
+    saving_group = db.relationship('SavingGroup', backref='users', lazy='dynamic')
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -162,6 +164,61 @@ class UserFinDetails(db.Model):
         return self
 
 
+class SavingGroup(db.Model):
+    __tablename__ = 'saving_group'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(64), unique=True)
+    creation_date = db.Column(db.Date)
+    share = db.Column(db.Integer)
+    interest_rate = db.Column(db.Integer)
+    max_share = db.Column(db.Integer)
+    social_fund = db.Column(db.Integer)
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), index=True)
+    project_id = db.Column(db.Integer, db.ForeignKey('project.id'), index=True)
+    agent_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
+    village_id = db.Column(db.Integer, db.ForeignKey('village.id'), index=True)
+
+    def get_url(self):
+        return url_for('api.get_sg', id=self.id, _external=True)
+
+    def export_data(self):
+        return {
+            'self_url': self.get_url(),
+            'id': self.id,
+            'name': self.name,
+            'creation_date': self.creation_date,
+            'share': self.share,
+            'interest_rate': self.interest_rate,
+            'max_share': self.max_share,
+            'social_fund': self.social_fund,
+            'location': self.village.export_data()
+        }
+
+    def import_data(self, data):
+        try:
+            self.name = data['name'],
+            self.creation_date = data['date'],
+            self.share = data['share'],
+            self.interest_rate = data['interest_rate'],
+            self.max_share = data['max_share'],
+            self.social_fund = data['social_fund']
+        except KeyError as e:
+            raise ValidationError('Invalid order: missing ' + e.args[0])
+        return self
+
+
+class SavingGroupMember(db.Model):
+    pass
+
+
+class SavingGroupCycle(db.Model):
+    pass
+
+
+class SavingGroupDropOut(db.Model):
+    pass
+
+
 class Project(db.Model):
     __tablename__ = 'project'
     id = db.Column(db.Integer, primary_key=True)
@@ -174,6 +231,8 @@ class Project(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), index=True)
     intervention = db.relationship('InterventionArea', backref='project', lazy='dynamic')
+    project_agent = db.relationship('ProjectAgent', backref='project', lazy='dynamic')
+    saving_group = db.relationship('SavingGroup', backref='project', lazy='dynamic')
 
     def get_url(self):
         return url_for('api.get_project', id=self.id, _external=True)
@@ -189,7 +248,8 @@ class Project(db.Model):
             'donor': self.donor,
             'date': self.date,
             'user_id': self.user_id,
-            'organization_url': self.organization.get_url()
+            'organization_url': self.organization.get_url(),
+            'intervention': url_for('api.get_project_intervention_area', id=self.id, _external=True)
 
         }
 
@@ -201,8 +261,34 @@ class Project(db.Model):
             self.budget = data['budget'],
             self.donor = data['donor'],
             self.user_id = data['user_id']
+
         except KeyError as e:
             raise ValidationError('Invalid order: missing ' + e.args[0])
+        return self
+
+
+class ProjectAgent(db.Model):
+    __tablename__ = 'project_agent'
+    id = db.Column(db.Integer, primary_key=True)
+    project_id = db.Column(db.Integer, db.ForeignKey('project.id'), index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
+    date = db.Column(db.DateTime, default=datetime.utcnow())
+    db.Index('project_agent_index', project_id, user_id, unique=True)
+
+    def get_url(self):
+        return url_for('api.get_project_agent', id=self.id, _external=True)
+
+    def export_data(self):
+        return {
+            'project': self.project.export_data(),
+            'date': self.date
+        }
+
+    def import_data(self, data):
+        try:
+            self.user_id = data['user_id']
+        except KeyError as e:
+            raise ValidationError('Invalid ProjectAgent: missing ' + e.args[0])
         return self
 
 
@@ -212,7 +298,6 @@ class InterventionArea(db.Model):
     date = db.Column(db.DateTime, default=datetime.utcnow())
     village_id = db.Column(db.Integer, db.ForeignKey('village.id'), index=True)
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'), index=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
 
     def get_url(self):
         return url_for('api.get_intervention_area', id=self.id, _external=True)
@@ -221,15 +306,17 @@ class InterventionArea(db.Model):
         return {
             'self_url': self.get_url(),
             'date': self.date,
-            'village': self.village.export_data(),
-            'project': self.project.export_data(),
-            'user_id': self.user_id
+            'village': self.village.export_data()
+        }
+
+    def export_agent_project(self):
+        return {
+            'project': self.project.export_data()
         }
 
     def import_data(self, data):
         try:
-            self.village_id = data['village_id'],
-            self.user_id = data['user_id'],
+            self.village_id = data['village_id']
         except KeyError as e:
             raise ValidationError('Invalid order: missing ' + e.args[0])
         return self
@@ -241,6 +328,7 @@ class Village(db.Model):
     name = db.Column(db.String(50))
     code = db.Column(db.String(20), unique=True)
     intervention = db.relationship('InterventionArea', backref='village', lazy='dynamic')
+    saving_group = db.relationship('SavingGroup', backref='village', lazy='dynamic')
 
     def get_url(self):
         return url_for('api.get_village', id=self.id, _external=True)
