@@ -177,6 +177,9 @@ class SavingGroup(db.Model):
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'), index=True)
     agent_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
     village_id = db.Column(db.Integer, db.ForeignKey('village.id'), index=True)
+    sg_financial = db.relationship('SavingGroupFinDetails', backref='saving_group', lazy='dynamic')
+    member = db.relationship('SavingGroupMember', backref='saving_group', lazy='dynamic')
+    wallet = db.relationship('SavingGroupWallet', backref='saving_group', lazy='dynamic')
 
     def get_url(self):
         return url_for('api.get_sg', id=self.id, _external=True)
@@ -207,16 +210,216 @@ class SavingGroup(db.Model):
         return self
 
 
-class SavingGroupMember(db.Model):
-    pass
+class SavingGroupWallet(db.Model):
+    __tablename__ = 'sg_wallet'
+    id = db.Column(db.Intger, primary_key=True)
+    amount = db.Column(db.Float)
+    saving_group_id = db.Column(db.Integer, db.ForeignKey('saving_group.id'), index=True)
+    member_transaction = db.relationship('SgMemberTransaction', backref='sg_wallet', lazy='dynamic')
+
+    def get_url(self):
+        return url_for('api.get_sg_wallet', id=self.id, _external=True)
+
+    def export_data(self):
+        return {
+            'id': self.id,
+            'amount': self.amount,
+            'saving_group_id': self.saving_group_id
+        }
+
+    def import_data(self, data):
+        try:
+            self.amount = data['amount']
+        except KeyError as e:
+            raise ValidationError('Invalid SG_Wallet ' + e.args[0])
+        return self
+
+
+class SgMemberTransaction(db.Model):
+    __tablename__ = 'sg_member_transaction'
+    id = db.Column(db.Integer, primary_key=True)
+    amount = db.Column(db.Float)
+    operator = db.Column(db.Integer)  # 1 MTN # 2 TIGO # 3 AIRTEL
+    type = db.Column(db.Integer)  # 1 Saving # 2 Social Fund
+    date = db.Column(db.DateTime, default=datetime.utcnow())
+    sg_cycle_id = db.Column(db.Integer, db.ForeignKey('sg_cycle.id'), index=True)
+    sg_member_id = db.Column(db.Integer, db.ForeignKey('sg_member.id'), index=True)
+    sg_wallet_id = db.Column(db.Integer, db.ForeignKey('sg_wallet.id'), index=True)
+
+    def get_url(self):
+        return url_for('api.get_sg_member_transaction', id=self.id, _external=delattr())
+
+    def export_data(self):
+        return {
+            'id': self.id,
+            'amount': self.amount,
+            'operator': self.operator,
+            'type': self.type,
+            'date': self.data,
+            'sg_cycle_id': self.sg_cycle_id,
+            'sg_member_id': self.sg_member_id,
+            'sg_wallet_id': self.sg_wallet_id
+        }
+
+    def import_data(self, data):
+        try:
+            self.amount = data['amount'],
+            self.operator = data['operator'],
+            self.type = data['type'],
+            self.sg_cycle_id = data['sg_cycle_id'],
+            self.sg_wallet_id = data['sg_wallet_id']
+        except KeyError as e:
+            raise ValidationError('Invalid SGMemberTransaction ' + e.args[0])
+        return self
+
+
+class SgDebitLoan(db.Model):
+    __tablename__ = 'sg_debit_loan'
+    id = db.Column(db.Integer, primary_key=True)
+    amount_loaned = db.Column(db.Float)
+    request_date = db.Column(db.DateTime, default=datetime.utcnow())
+    interest_rate = db.Column(db.Integer)
+    amount_to_pay = db.Column(db.Float)
+    date_repayment = db.Column(db.Date)
+    sg_cycle_id = db.Column(db.Integer, db.ForeignKey('sg_cycle.id'), index=True)
+    sg_member_id = db.Column(db.Integer, db.ForeignKey('sg_member.id'), index=True)
+    sg_wallet_id = db.Column(db.Integer, db.ForeignKey('sg_wallet.id'), index=True)
+
+    def get_url(self):
+        return url_for('api.get_sg_debit_loan', id=self.id, _external=True)
+
+    def export_data(self):
+        return {
+            'id': self.id,
+            'amount_loaned': self.amount_loaned,
+            'date': self.date,
+            'interest_rate': self.interest_rate,
+            'amount_payed': self.amount_payed,
+            'date_repayment': self.date_repayment,
+            'sg_cycle_id': self.cyle_id,
+            'sg_member_id': self.sg_member_id,
+            'sg_wallet_id': self.sg_wallet_id
+        }
+
+    def import_data(self, data):
+        try:
+            self.amount_loaned = data['amount_loaned'],
+            self.interest_rate = data['interest_rate'],
+            self.amount_to_pay = data['amount_to_pay'],
+            self.sg_cycle_id = data['sg_cycle_id'],
+            self.sg_wallet_id = data['sg_wallet_id']
+        except KeyError as e:
+            raise ValidationError('Invalid sg_debit_loan' + e.args[0])
+        return self
 
 
 class SavingGroupCycle(db.Model):
-    pass
+    __tablename__ = 'sg_cycle'
+    id = db.Column(db.Integer, primary_key=True)
+    start = db.Column(db.Date)
+    end = db.Column(db.Date)
+    saving_group_id = db.Column(db.Integer, db.ForeignKey('saving_group.id'), index=True)
+    drop_out = db.relationship('SavingGroupDropOut', backref='sg_cycle', lazy='dynamic')
+
+    def get_url(self):
+        return url_for('api.get_sg_cycle', id=self.id)
+
+    def export_data(self):
+        return {
+            'id': self.id,
+            'start': self.start,
+            'end': self.end,
+            'saving_group_id': self.id
+        }
+
+    def import_data(self, data):
+        try:
+            self.start = data['start'],
+            self.end = data['end']
+        except KeyError as e:
+            raise ValidationError('Invalid Cycle ' + e.args[0])
+        return self
+
+
+class SavingGroupMember(db.Model):
+    __tablename__ = 'sg_member'
+    id = db.Column(db.Integer, primary_key=True)
+    saving_group_id = db.Column(db.Integer, db.ForeignKey('saving_group.id'), index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
+    date = db.Column(db.DateTime, default=datetime.utcnow())
+    drop_out = db.relationship('SavingGroupDropOut', backref='sg_member', lazy='dynamic')
+
+    def get_url(self):
+        return url_for('api.get_sg_member', id=self.id, _external=True)
+
+    def export_data(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'date': self.date
+        }
+
+    def import_data(self,data):
+        try:
+            self.user_id = data['user_id']
+        except KeyError as e:
+            raise ValidationError('Invalid sg_member '+ e.args[0])
+        return self
 
 
 class SavingGroupDropOut(db.Model):
-    pass
+    __tablename__ = 'sg_drop_out'
+    id = db.Column(db.Integer, primary_key=True)
+    date = db.Column(db.DateTime, default=datetime.utcnow())
+    sg_member_id = db.Column(db.Integer, db.ForeignKey('sg_member.id'), index=True)
+    sg_cycle_id = db.Column(db.Integer, db.ForeignKey('sg_cycle.id'), index=True)
+
+    def get_url(self):
+        return url_for('api.get_sg_member_drop', id=self.id, _external=True)
+
+    def export_data(self):
+        return {
+            'id': self.id,
+            'date': self.date,
+            'sg_member_id': self.sg_member_id
+        }
+
+    def import_data(self, data):
+        try:
+            pass
+        except KeyError as e:
+            raise ValidationError('invalid Drop dout ' + e.args[0])
+        return self
+
+
+class SavingGroupFinDetails(db.Model):
+    __tablename__ = 'sg_fin_details'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(64))
+    type = db.Column(db.Integer)  # 1 Banks # 2 MFIs # 3 Usacco # NUsacco # Telco
+    account = db.Column(db.String(64))
+    saving_group_id = db.Column(db.Integer, db.ForeignKey('saving_group.id'), index=True)
+
+    def get_url(self):
+        return url_for('api.get_sg_fin_details', id=self.id, _external=True)
+
+    def export_data(self):
+        return {
+            'self_url': self.get_url(),
+            'name': self.name,
+            'type': self.type,
+            'account': self.account,
+            'user_id': self.user_id
+        }
+
+    def import_data(self, data):
+        try:
+            self.name = data['name'],
+            self.type = data['type'],
+            self.account = data['account']
+        except KeyError as e:
+            raise ValidationError('Invalid financial: missing ' + e.args[0])
+        return self
 
 
 class Project(db.Model):
