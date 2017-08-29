@@ -54,8 +54,9 @@ def user_login():
     user = User.query.\
         filter((User.email == data['username']) | (User.phone == data['username']) | (User.username == data['username'])).\
         first()
-    if user.verify_password(data['password']):
-        return user
+    if user:
+        if user.verify_password(data['password']):
+            return user
     return {}, 404
 
 
