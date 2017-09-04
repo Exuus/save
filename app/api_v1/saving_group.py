@@ -35,6 +35,23 @@ def new_saving_group(id):
     return {}, 201, {'Location': sg.get_url()}
 
 
+@api.route('/cycle/<int:id>', methods=['GET'])
+@json
+def get_cycle(id):
+    return SavingGroupCycle.query.get_or_404(id)
+
+
+@api.route('/sg/<int:id>/cycle/', methods=['POST'])
+@json
+def new_sg_cycle(id):
+    saving_group = SavingGroup.query.get_or_404(id)
+    cycle = SavingGroupCycle(saving_group=saving_group)
+    cycle.import_data(request.json)
+    db.session.add(cycle)
+    db.session.commit()
+    return {}, 201, {'Location': cycle.get_url()}
+
+
 @api.route('/member/<int:id>', methods=['GET'])
 @json
 def get_sg_member(id):
@@ -45,7 +62,7 @@ def get_sg_member(id):
 @json
 def check_member_pin(id):
     member = SavingGroupMember.query.\
-        filter(and_(SavingGroupMember.user_id == id,
+        filter(and_(SavingGroupMember.id == id,
                     SavingGroupMember.pin.isnot(None))).first()
     if member:
         return {}, 200
@@ -55,7 +72,7 @@ def check_member_pin(id):
 @api.route('/member/<int:id>/pin/', methods=['POST'])
 @json
 def verify_member_pin(id):
-    member = SavingGroupMember.query.filter(SavingGroupMember.user_id == id).first()
+    member = SavingGroupMember.query.get_or_404(id)
     if member:
         if member.verify_pin(request.json['pin']):
             return {}, 200, {'Location': member.get_url()}
@@ -65,11 +82,17 @@ def verify_member_pin(id):
 @api.route('/member/<int:id>/pin/', methods=['PUT'])
 @json
 def add_pin(id):
-    member = SavingGroupMember.query.filter(SavingGroupMember.user_id == id).first()
+    member = SavingGroupMember.query.get_or_404(id)
     member.set_pin(request.json['pin'])
     db.session.add(member)
     db.session.commit()
     return {}, 200
+
+
+@api.route('/member/<int:id>/savings/', methods=['POST'])
+@json
+def new_member_savings(id):
+    pass
 
 
 @api.route('/sg/<int:id>/members/', methods=['GET'])
