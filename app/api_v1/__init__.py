@@ -20,4 +20,5 @@ def after_request(rv):
     return rv
 
 
-from . import users, organizations, project, intervention, village, user_fin_details
+from . import users, organizations, project, intervention, village, user_fin_details, \
+    saving_group
