@@ -180,6 +180,7 @@ class SavingGroup(db.Model):
     sg_financial = db.relationship('SavingGroupFinDetails', backref='saving_group', lazy='dynamic')
     sg_member = db.relationship('SavingGroupMember', backref='saving_group', lazy='dynamic')
     sg_wallet = db.relationship('SavingGroupWallet', backref='saving_group', lazy='dynamic')
+    sg_cycle = db.relationship('SavingGroupCycle', backref='saving_group', lazy='dynamic')
 
     def get_url(self):
         return url_for('api.get_sg', id=self.id, _external=True)
@@ -217,9 +218,10 @@ class SavingGroup(db.Model):
 class SavingGroupWallet(db.Model):
     __tablename__ = 'sg_wallet'
     id = db.Column(db.Integer, primary_key=True)
-    amount = db.Column(db.Float)
+    amount = db.Column(db.Float, default=0)
+    date = db.Column(db.DateTime, default=datetime.utcnow())
     saving_group_id = db.Column(db.Integer, db.ForeignKey('saving_group.id'), index=True)
-    member_transaction = db.relationship('SgMemberTransaction', backref='sg_wallet', lazy='dynamic')
+    member_transaction = db.relationship('SgMemberContributions', backref='sg_wallet', lazy='dynamic')
 
     def get_url(self):
         return url_for('api.get_sg_wallet', id=self.id, _external=True)
@@ -231,16 +233,17 @@ class SavingGroupWallet(db.Model):
             'saving_group_id': self.saving_group_id
         }
 
-    def import_data(self, data):
-        try:
-            self.amount = data['amount']
-        except KeyError as e:
-            raise ValidationError('Invalid SG_Wallet ' + e.args[0])
+    def credit_wallet(self, amount):
+        self.amount = self.amount + float(amount)
+        return self
+
+    def debit_wallet(self, amount):
+        self.amount = self.amount + float(amount)
         return self
 
 
-class SgMemberTransaction(db.Model):
-    __tablename__ = 'sg_member_transaction'
+class SgMemberContributions(db.Model):
+    __tablename__ = 'sg_member_contributions'
     id = db.Column(db.Integer, primary_key=True)
     amount = db.Column(db.Float)
     operator = db.Column(db.Integer)  # 1 MTN # 2 TIGO # 3 AIRTEL
@@ -251,7 +254,7 @@ class SgMemberTransaction(db.Model):
     sg_wallet_id = db.Column(db.Integer, db.ForeignKey('sg_wallet.id'), index=True)
 
     def get_url(self):
-        return url_for('api.get_sg_member_transaction', id=self.id, _external=delattr())
+        return url_for('api.get_sg_member_contribution', id=self.id, _external=True)
 
     def export_data(self):
         return {
@@ -259,21 +262,16 @@ class SgMemberTransaction(db.Model):
             'amount': self.amount,
             'operator': self.operator,
             'type': self.type,
-            'date': self.data,
-            'sg_cycle_id': self.sg_cycle_id,
-            'sg_member_id': self.sg_member_id,
-            'sg_wallet_id': self.sg_wallet_id
+            'date': self.data
         }
 
     def import_data(self, data):
         try:
             self.amount = data['amount'],
             self.operator = data['operator'],
-            self.type = data['type'],
-            self.sg_cycle_id = data['sg_cycle_id'],
-            self.sg_wallet_id = data['sg_wallet_id']
+            self.type = data['type']
         except KeyError as e:
-            raise ValidationError('Invalid SGMemberTransaction ' + e.args[0])
+            raise ValidationError('Invalid SgMemberContributions ' + e.args[0])
         return self
 
 
@@ -414,24 +412,28 @@ class SavingGroupCycle(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     start = db.Column(db.Date)
     end = db.Column(db.Date)
+    active = db.Column(db.Integer, default=1)  # 1 active cycle | 0 not actif cycle
     saving_group_id = db.Column(db.Integer, db.ForeignKey('saving_group.id'), index=True)
     drop_out = db.relationship('SavingGroupDropOut', backref='sg_cycle', lazy='dynamic')
+    contributions = db.relationship('SgMemberContributions', backref='sg_cycle', lazy='dynamic')
+    db.Index('unique_cycle', start, end, saving_group_id, unique=True)
 
     def get_url(self):
-        return url_for('api.get_sg_cycle', id=self.id)
+        return url_for('api.get_cycle', id=self.id, _external=True)
 
     def export_data(self):
         return {
             'id': self.id,
             'start': self.start,
             'end': self.end,
+            'active': self.active,
             'saving_group_id': self.id
         }
 
     def import_data(self, data):
         try:
-            self.start = data['start'],
-            self.end = data['end']
+            self.start = datetime.strptime(data['start'], "%Y-%m-%d").date(),
+            self.end = datetime.strptime(data['end'], "%Y-%m-%d").date()
         except KeyError as e:
             raise ValidationError('Invalid Cycle ' + e.args[0])
         return self
@@ -445,8 +447,9 @@ class SavingGroupMember(db.Model):
     pin = db.Column(db.String(128), index=True)
     date = db.Column(db.DateTime, default=datetime.utcnow())
     drop_out = db.relationship('SavingGroupDropOut', backref='sg_member', lazy='dynamic')
-    member_approved_social = db.relation('SgApprovedSocialDebit', backref='sg_member', lazy='dynamic')
-    member_approved_loan = db.relation('SgApprovedLoan', backref='sg_member', lazy='dynamic')
+    member_approved_social = db.relationship('SgApprovedSocialDebit', backref='sg_member', lazy='dynamic')
+    member_approved_loan = db.relationship('SgApprovedLoan', backref='sg_member', lazy='dynamic')
+    contributions = db.relationship('SgMemberContributions', backref='sg_member', lazy='dynamic')
     db.Index('member_sg_index', saving_group_id, user_id, unique=True)
 
     def set_pin(self, pin):
