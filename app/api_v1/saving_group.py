@@ -3,7 +3,7 @@ from . import api
 from .. import db
 from ..models import SavingGroup, SavingGroupCycle, SavingGroupDropOut,\
     SavingGroupFinDetails, SavingGroupMember, SavingGroupWallet, \
-    SgApprovedLoan, SgApprovedSocialDebit, SgMemberTransaction, \
+    SgApprovedLoan, SgApprovedSocialDebit, SgMemberContributions, \
     Project, ProjectAgent, Organization
 from ..decorators import json, paginate, no_cache
 from sqlalchemy import and_
@@ -28,11 +28,21 @@ def get_project_sgs(id):
 @api.route('/project/<int:id>/sg/', methods=['POST'])
 @json
 def new_saving_group(id):
+
+    """ SG Creations """
+
     project = Project.query.get_or_404(id)
     sg = SavingGroup(project=project)
     sg.import_data(request.json)
     db.session.add(sg)
     db.session.commit()
+
+    """ SG  Wallet Creation """
+
+    sg_wallet = SavingGroupWallet(saving_group=sg)
+    db.session.add(sg_wallet)
+    db.session.commit()
+
     return {}, 201, {'Location': sg.get_url()}
 
 
@@ -94,10 +104,37 @@ def add_pin(id):
     return {}, 200
 
 
+@api.route('/member/contribution/<int:id>')
+@json
+def get_sg_member_contribution(id):
+    return SgMemberContributions.query.get_or_404(id)
+
+
 @api.route('/member/<int:id>/savings/', methods=['POST'])
 @json
 def new_member_savings(id):
-    pass
+    data = request.json
+    member = SavingGroupMember.query.get_or_404(id)
+    if member:
+        if member.verify_pin(data['pin']):
+            wallet = SavingGroupWallet.query.\
+                filter(SavingGroupWallet.saving_group_id == member.saving_group_id).first()
+            cycle = SavingGroupCycle.query.\
+                filter(and_(SavingGroupCycle.active == 1,
+                            SavingGroupCycle.saving_group_id == member.saving_group_id)).\
+                first()
+
+            contributions = SgMemberContributions(sg_cycle=cycle,
+                                                  sg_wallet=wallet,
+                                                  sg_member=member)
+            contributions.import_data(data)
+            wallet.credit_wallet(data['amount'])
+            db.session.add(contributions)
+            db.session.add(wallet)
+            db.session.commit()
+            return {}, 200, {'Location': contributions.get_url()}
+
+    return {}, 404
 
 
 @api.route('/sg/<int:id>/members/', methods=['GET'])
