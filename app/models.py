@@ -67,7 +67,6 @@ class User(db.Model):
     gender = db.Column(db.Integer)  # 0 Male # 1 Female
     education = db.Column(db.String(64))
     location = db.Column(db.String(128))
-    pin = db.Column(db.Integer)
     first_login = db.Column(db.Integer, default=1)  # 1 never logged in # 0 already logged in
     confirmation_code = db.Column(db.String(12), default=generate_code())
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), index=True)
@@ -81,12 +80,6 @@ class User(db.Model):
 
     def verify_password(self, password):
         return check_password_hash(self.password_hash, password)
-
-    def set_pin(self, pin):
-        self.pin = generate_password_hash(pin)
-
-    def verify_pin(self, pin):
-        return check_password_hash(self.pin, pin)
 
     def generate_auth_token(self, expires_in=86400):
         s = Serializer(current_app.config['SECRET_KEY'], expires_in=expires_in)
@@ -449,11 +442,18 @@ class SavingGroupMember(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     saving_group_id = db.Column(db.Integer, db.ForeignKey('saving_group.id'), index=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
+    pin = db.Column(db.String(128), index=True)
     date = db.Column(db.DateTime, default=datetime.utcnow())
     drop_out = db.relationship('SavingGroupDropOut', backref='sg_member', lazy='dynamic')
     member_approved_social = db.relation('SgApprovedSocialDebit', backref='sg_member', lazy='dynamic')
     member_approved_loan = db.relation('SgApprovedLoan', backref='sg_member', lazy='dynamic')
     db.Index('member_sg_index', saving_group_id, user_id, unique=True)
+
+    def set_pin(self, pin):
+        self.pin = generate_password_hash(pin)
+
+    def verify_pin(self, pin):
+        return check_password_hash(self.pin, pin)
 
     def get_url(self):
         return url_for('api.get_sg_member', id=self.id, _external=True)
