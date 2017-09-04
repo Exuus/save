@@ -6,6 +6,7 @@ from ..models import SavingGroup, SavingGroupCycle, SavingGroupDropOut,\
     SgApprovedLoan, SgApprovedSocialDebit, SgMemberTransaction, \
     Project, ProjectAgent, Organization
 from ..decorators import json, paginate, no_cache
+from sqlalchemy import and_
 
 
 @api.route('/sg/<int:id>/', methods=['GET'])
@@ -38,6 +39,37 @@ def new_saving_group(id):
 @json
 def get_sg_member(id):
     return SavingGroupMember.query.get(id)
+
+
+@api.route('/member/<int:id>/pin/', methods=['GET'])
+@json
+def check_member_pin(id):
+    member = SavingGroupMember.query.\
+        filter(and_(SavingGroupMember.user_id == id,
+                    SavingGroupMember.pin.isnot(None))).first()
+    if member:
+        return {}, 200
+    return {}, 404
+
+
+@api.route('/member/<int:id>/pin/', methods=['POST'])
+@json
+def verify_member_pin(id):
+    member = SavingGroupMember.query.filter(SavingGroupMember.user_id == id).first()
+    if member:
+        if member.verify_pin(request.json['pin']):
+            return {}, 200, {'Location': member.get_url()}
+    return {}, 404
+
+
+@api.route('/member/<int:id>/pin/', methods=['PUT'])
+@json
+def add_pin(id):
+    member = SavingGroupMember.query.filter(SavingGroupMember.user_id == id).first()
+    member.set_pin(request.json['pin'])
+    db.session.add(member)
+    db.session.commit()
+    return {}, 200
 
 
 @api.route('/sg/<int:id>/members/', methods=['GET'])
