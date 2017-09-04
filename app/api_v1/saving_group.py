@@ -7,6 +7,7 @@ from ..models import SavingGroup, SavingGroupCycle, SavingGroupDropOut,\
     Project, ProjectAgent, Organization
 from ..decorators import json, paginate, no_cache
 from sqlalchemy import and_
+from sqlalchemy.exc import IntegrityError
 
 
 @api.route('/sg/<int:id>/', methods=['GET'])
@@ -47,9 +48,13 @@ def new_sg_cycle(id):
     saving_group = SavingGroup.query.get_or_404(id)
     cycle = SavingGroupCycle(saving_group=saving_group)
     cycle.import_data(request.json)
-    db.session.add(cycle)
-    db.session.commit()
-    return {}, 201, {'Location': cycle.get_url()}
+    try:
+        db.session.add(cycle)
+        db.session.commit()
+        return {}, 201, {'Location': cycle.get_url()}
+    except IntegrityError:
+        db.session.rollback()
+        return {}, 500
 
 
 @api.route('/member/<int:id>', methods=['GET'])
