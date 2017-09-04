@@ -254,7 +254,7 @@ class SgMemberContributions(db.Model):
     sg_wallet_id = db.Column(db.Integer, db.ForeignKey('sg_wallet.id'), index=True)
 
     def get_url(self):
-        return url_for('api.get_sg_member_contribution', id=self.id, _external=True)
+        return url_for('api.get_contribution', id=self.id, _external=True)
 
     def export_data(self):
         return {
@@ -262,7 +262,7 @@ class SgMemberContributions(db.Model):
             'amount': self.amount,
             'operator': self.operator,
             'type': self.type,
-            'date': self.data
+            'date': self.date
         }
 
     def import_data(self, data):
