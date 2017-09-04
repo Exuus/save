@@ -104,13 +104,33 @@ def add_pin(id):
     return {}, 200
 
 
-@api.route('/member/contribution/<int:id>')
+@api.route('/contributions/<int:id>')
 @json
-def get_sg_member_contribution(id):
+def get_contribution(id):
     return SgMemberContributions.query.get_or_404(id)
 
 
-@api.route('/member/<int:id>/savings/', methods=['POST'])
+@api.route('/member/<int:id>/savings/')
+@json
+@paginate('member_savings')
+def get_member_savings(id):
+    member = SavingGroupMember.query.get_or_404(id)
+    return member.contributions.filter_by(type=1).join(SavingGroupCycle)\
+        .filter(and_(SavingGroupCycle.id == SgMemberContributions.sg_cycle_id),
+                SavingGroupCycle.active == 1)
+
+
+@api.route('/member/<int:id>/social-fund/')
+@json
+@paginate('member_social_fund')
+def get_member_social_fund(id):
+    member = SavingGroupMember.query.get_or_404(id)
+    return member.contributions.filter_by(type=2).join(SavingGroupCycle)\
+        .filter(and_(SavingGroupCycle.id == SgMemberContributions.sg_cycle_id),
+                SavingGroupCycle.active == 1)
+
+
+@api.route('/member/<int:id>/contributions/', methods=['POST'])
 @json
 def new_member_savings(id):
     data = request.json
