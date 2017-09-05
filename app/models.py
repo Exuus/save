@@ -356,6 +356,10 @@ class SgApprovedLoan(db.Model):
     debit_loan_id = db.Column(db.Integer, db.ForeignKey('sg_debit_loan.id'), index=True)
     committee_id = db.Column(db.Integer, db.ForeignKey('sg_member.id'), index=True)
 
+
+    def get_status(cls):
+        pass
+
     def get_url(self):
         return url_for('api.get_sg_approved_loan', id=self.id, _external=True)
 
