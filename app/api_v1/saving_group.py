@@ -152,7 +152,7 @@ def new_member_savings(id):
             db.session.add(contributions)
             db.session.add(wallet)
             db.session.commit()
-            return {}, 200, {'Location': contributions.get_url()}
+            return {}, 201, {'Location': contributions.get_url()}
 
     return {}, 404
 
