@@ -6,8 +6,8 @@ class Config(object):
     SECRET_KEY = 'p9Bv<3Eid9%$i01'
     MAIL_SERVER = 'smtp.gmail.com'
     MAIL_PORT = '465'
-    MAIL_USERNAME = 'jeanremy1806@gmail.com'
-    MAIL_PASSWORD = '1806MUHIRE'
+    MAIL_USERNAME = 'noreply@getsave.io'
+    MAIL_PASSWORD = 'getsave.io@2018'
     MAIL_USE_TLS = False
     MAIL_USE_SSL = True
 
