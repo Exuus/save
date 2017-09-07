@@ -3,8 +3,8 @@ from . import api
 from .. import db
 from ..models import SavingGroup, SavingGroupCycle, SavingGroupDropOut,\
     SavingGroupFinDetails, SavingGroupMember, SavingGroupWallet, \
-    SgApprovedLoan, SgApprovedSocialDebit, SgMemberContributions, \
-    Project, ProjectAgent, Organization
+    MemberLoan, MemberSocialFund, MemberApprovedSocial, MemberApprovedLoan,\
+    SgMemberContributions, Project, ProjectAgent, Organization
 from ..decorators import json, paginate, no_cache
 from sqlalchemy import and_
 from sqlalchemy.exc import IntegrityError
@@ -157,10 +157,36 @@ def new_member_savings(id):
     return {}, 404
 
 
+@api.route('/loan/<int:id>')
+@json
+def get_loan(id):
+    return MemberLoan.query.get_or_404(id)
+
+
 @api.route('/member/<int:id>/loan/', methods=['GET'])
 @json
 def new_loan_request(id):
-    pass
+    member = SavingGroupMember.query.get_or_404(id)
+    if member:
+        if member.verify_pin(request.json['pin']):
+            wallet = SavingGroupWallet.query. \
+                filter(SavingGroupWallet.saving_group_id == member.saving_group_id).first()
+            cycle = SavingGroupCycle.query. \
+                filter(and_(SavingGroupCycle.active == 1,
+                            SavingGroupCycle.saving_group_id == member.saving_group_id)). \
+                first()
+            loan = MemberLoan(
+                sg_cycle=cycle,
+                sg_wallet=wallet,
+                sg_member=member
+            )
+
+            loan.import_data(request.json)
+            db.session.add(loan)
+            db.session.commit()
+            return {}, 201, {'Location': loan.get_url()}
+
+    return {}, 404
 
 
 @api.route('/sg/<int:id>/members/', methods=['GET'])
