@@ -222,6 +222,7 @@ class SavingGroupWallet(db.Model):
     date = db.Column(db.DateTime, default=datetime.utcnow())
     saving_group_id = db.Column(db.Integer, db.ForeignKey('saving_group.id'), index=True)
     member_transaction = db.relationship('SgMemberContributions', backref='sg_wallet', lazy='dynamic')
+    member_loan = db.relationship('MemberLoan', backref='sg_wallet', lazy='dynamic')
 
     def get_url(self):
         return url_for('api.get_sg_wallet', id=self.id, _external=True)
@@ -275,21 +276,21 @@ class SgMemberContributions(db.Model):
         return self
 
 
-class SgDebitLoan(db.Model):
-    __tablename__ = 'sg_debit_loan'
+class MemberLoan(db.Model):
+    __tablename__ = 'member_loan'
     id = db.Column(db.Integer, primary_key=True)
     amount_loaned = db.Column(db.Float)
     request_date = db.Column(db.DateTime, default=datetime.utcnow())
     interest_rate = db.Column(db.Integer)
-    amount_to_pay = db.Column(db.Float)
-    date_repayment = db.Column(db.Date)
+    approved_date = db.Column(db.Date)
+    date_repayment = db.Column(db.Integer)
     sg_cycle_id = db.Column(db.Integer, db.ForeignKey('sg_cycle.id'), index=True)
     sg_member_id = db.Column(db.Integer, db.ForeignKey('sg_member.id'), index=True)
     sg_wallet_id = db.Column(db.Integer, db.ForeignKey('sg_wallet.id'), index=True)
-    approved = db.relationship('SgApprovedLoan', backref='sg_debit_loan',  lazy='dynamic')
+    approved = db.relationship('MemberApprovedLoan', backref='member_loan',  lazy='dynamic')
 
     def get_url(self):
-        return url_for('api.get_sg_debit_loan', id=self.id, _external=True)
+        return url_for('api.get_loan', id=self.id, _external=True)
 
     def export_data(self):
         return {
@@ -298,62 +299,25 @@ class SgDebitLoan(db.Model):
             'date': self.date,
             'interest_rate': self.interest_rate,
             'amount_payed': self.amount_payed,
-            'date_repayment': self.date_repayment,
-            'sg_cycle_id': self.cyle_id,
-            'sg_member_id': self.sg_member_id,
-            'sg_wallet_id': self.sg_wallet_id
+            'date_repayment': self.date_repayment
         }
 
     def import_data(self, data):
         try:
             self.amount_loaned = data['amount_loaned'],
             self.interest_rate = data['interest_rate'],
-            self.amount_to_pay = data['amount_to_pay'],
-            self.sg_cycle_id = data['sg_cycle_id'],
-            self.sg_wallet_id = data['sg_wallet_id']
+            self.date_repayment = data['date_repayment']
         except KeyError as e:
             raise ValidationError('Invalid sg_debit_loan' + e.args[0])
         return self
 
 
-class SgSocialDebit(db.Model):
-    __tablename__ = 'sg_social_debit'
-    id = db.Column(db.Integer, primary_key=True)
-    amount_debited = db.Column(db.Float)
-    date = db.Column(db.DateTime, default=datetime.utcnow())
-    sg_cycle_id = db.Column(db.Integer, db.ForeignKey('sg_cycle.id'), index=True)
-    sg_member_id = db.Column(db.Integer, db.ForeignKey('sg_member.id'), index=True)
-    sg_wallet_id = db.Column(db.Integer, db.ForeignKey('sg_wallet.id'), index=True)
-
-    approved = db.relationship('SgApprovedSocialDebit', backref='sg_social_debit', lazy='dynamic')
-
-    def get_url(self):
-        return url_for('api.get_sg_social_debit', id=self.id, _external=True)
-
-    def export_data(self):
-        return {
-            'id': self.id,
-            'amount_debited': self.amount_debited,
-            'sg_cycle_id': self.sg_cycle_id,
-            'sg_member_id': self.sg_member_id,
-            'sg_wallet_id': self.sg_wallet_id
-        }
-
-    def import_data(self, data):
-        try:
-            self.amount_debited = data['amount_debited']
-            self.sg_cycle_id = data['sg_cycle_id']
-            self.sg_wallet_id = data['sg_wallet_id']
-        except KeyError as e:
-            ValidationError('Invalid Social Debit' + e.args[0])
-        return self
-
-
-class SgApprovedLoan(db.Model):
-    __tablename__ = 'sg_approved_loan'
+class MemberApprovedLoan(db.Model):
+    __tablename__ = 'member_approved_loan'
     id = db.Column(db.Integer, primary_key=True)
     approved = db.Column(db.Integer)  # 1 Approved 0 Declined
-    debit_loan_id = db.Column(db.Integer, db.ForeignKey('sg_debit_loan.id'), index=True)
+    date = db.Column(db.DateTime, default=datetime.utcnow())
+    debit_loan_id = db.Column(db.Integer, db.ForeignKey('member_loan.id'), index=True)
     committee_id = db.Column(db.Integer, db.ForeignKey('sg_member.id'), index=True)
 
     def get_url(self):
@@ -378,11 +342,44 @@ class SgApprovedLoan(db.Model):
         return self
 
 
-class SgApprovedSocialDebit(db.Model):
-    __tablename__ = 'sg_approved_social_debit'
+class MemberSocialFund(db.Model):
+    __tablename__ = 'member_social_fund'
+    id = db.Column(db.Integer, primary_key=True)
+    amount_debited = db.Column(db.Float)
+    date = db.Column(db.DateTime, default=datetime.utcnow())
+    sg_cycle_id = db.Column(db.Integer, db.ForeignKey('sg_cycle.id'), index=True)
+    sg_member_id = db.Column(db.Integer, db.ForeignKey('sg_member.id'), index=True)
+    sg_wallet_id = db.Column(db.Integer, db.ForeignKey('sg_wallet.id'), index=True)
+
+    approved = db.relationship('MemberApprovedSocial', backref='member_social_fund', lazy='dynamic')
+
+    def get_url(self):
+        return url_for('api.get_sg_social_debit', id=self.id, _external=True)
+
+    def export_data(self):
+        return {
+            'id': self.id,
+            'amount_debited': self.amount_debited,
+            'sg_cycle_id': self.sg_cycle_id,
+            'sg_member_id': self.sg_member_id,
+            'sg_wallet_id': self.sg_wallet_id
+        }
+
+    def import_data(self, data):
+        try:
+            self.amount_debited = data['amount_debited']
+            self.sg_cycle_id = data['sg_cycle_id']
+            self.sg_wallet_id = data['sg_wallet_id']
+        except KeyError as e:
+            ValidationError('Invalid Social Debit' + e.args[0])
+        return self
+
+
+class MemberApprovedSocial(db.Model):
+    __tablename__ = 'member_approved_social'
     id = db.Column(db.Integer, primary_key=True)
     approved = db.Column(db.Integer)  # 1 Approved 0 Declined
-    social_debit_id = db.Column(db.Integer, db.ForeignKey('sg_social_debit.id'), index=True)
+    social_debit_id = db.Column(db.Integer, db.ForeignKey('member_social_fund.id'), index=True)
     committee_id = db.Column(db.Integer, db.ForeignKey('sg_member.id'), index=True)
 
     def get_url(self):
@@ -416,6 +413,7 @@ class SavingGroupCycle(db.Model):
     saving_group_id = db.Column(db.Integer, db.ForeignKey('saving_group.id'), index=True)
     drop_out = db.relationship('SavingGroupDropOut', backref='sg_cycle', lazy='dynamic')
     contributions = db.relationship('SgMemberContributions', backref='sg_cycle', lazy='dynamic')
+    member_loan = db.relationship('MemberLoan', backref='sg_cycle', lazy='dynamic')
     db.Index('unique_cycle', start, end, saving_group_id, unique=True)
 
     def get_url(self):
@@ -447,9 +445,7 @@ class SavingGroupMember(db.Model):
     pin = db.Column(db.String(128), index=True)
     date = db.Column(db.DateTime, default=datetime.utcnow())
     drop_out = db.relationship('SavingGroupDropOut', backref='sg_member', lazy='dynamic')
-    member_approved_social = db.relationship('SgApprovedSocialDebit', backref='sg_member', lazy='dynamic')
-    member_approved_loan = db.relationship('SgApprovedLoan', backref='sg_member', lazy='dynamic')
-    contributions = db.relationship('SgMemberContributions', backref='sg_member', lazy='dynamic')
+    member_loan = db.relationship('MemberLoan', backref='sg_member', lazy='dynamic')
     db.Index('member_sg_index', saving_group_id, user_id, unique=True)
 
     def set_pin(self, pin):
