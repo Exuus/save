@@ -469,7 +469,6 @@ class SavingGroupMember(db.Model):
             'self_url': self.get_url()
         }
 
-
     def import_data(self,data):
         try:
             self.user_id = data['user_id']
