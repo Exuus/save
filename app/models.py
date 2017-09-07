@@ -286,7 +286,7 @@ class SgDebitLoan(db.Model):
     sg_cycle_id = db.Column(db.Integer, db.ForeignKey('sg_cycle.id'), index=True)
     sg_member_id = db.Column(db.Integer, db.ForeignKey('sg_member.id'), index=True)
     sg_wallet_id = db.Column(db.Integer, db.ForeignKey('sg_wallet.id'), index=True)
-    approved = db.relationship('SgApprovedLoan', backref='sg_debit_loan', lazy='dynamic')
+    approved = db.relationship('SgApprovedLoan', backref='sg_debit_loan',  lazy='dynamic')
 
     def get_url(self):
         return url_for('api.get_sg_debit_loan', id=self.id, _external=True)
