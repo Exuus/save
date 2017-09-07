@@ -157,6 +157,12 @@ def new_member_savings(id):
     return {}, 404
 
 
+@api.route('/member/<int:id>/loan/', methods=['GET'])
+@json
+def new_loan_request(id):
+    pass
+
+
 @api.route('/sg/<int:id>/members/', methods=['GET'])
 @no_cache
 @json
