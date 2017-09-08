@@ -302,15 +302,15 @@ class MemberLoan(db.Model):
             'amount_loaned': self.amount_loaned,
             'date': self.request_date,
             'interest_rate': self.interest_rate,
-            'date_repayment': self.date_repayment,
-            'expect_date_repayment': self.request_date + timedelta(days=self.date_repayment)
+            'date_repayment': self.initial_date_repayment,
+            'expect_date_repayment': self.request_date + timedelta(days=self.initial_date_repayment)
         }
 
     def import_data(self, data):
         try:
             self.amount_loaned = data['amount_loaned'],
             self.interest_rate = data['interest_rate'],
-            self.date_repayment = data['date_repayment']
+            self.initial_date_repayment = data['initial_date_repayment']
         except KeyError as e:
             raise ValidationError('Invalid sg_debit_loan' + e.args[0])
         return self
