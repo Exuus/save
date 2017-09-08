@@ -177,7 +177,8 @@ def get_member_pending_loan(id):
             .filter(and_(SavingGroupCycle.saving_group_id == member.saving_group_id,
                          SavingGroupCycle.id == MemberLoan.sg_cycle_id,
                          SavingGroupCycle.active == 1))\
-            .filter(MemberLoan.approved_date.is_(None))
+            .filter(MemberLoan.approve_date.is_(None))
+    return {}, 404,
 
 
 @api.route('/member/<int:id>/loan/', methods=['POST'])
