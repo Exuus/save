@@ -163,6 +163,23 @@ def get_loan(id):
     return MemberLoan.query.get_or_404(id)
 
 
+@api.route('/member/<int:id>/loan/pending/', methods=['GET'])
+@json
+@paginate('member_loan')
+def get_member_pending_loan(id):
+    member = SavingGroupMember.query.get_or_404(id)
+    if member:
+        return MemberLoan.query\
+            .join(SavingGroupMember)\
+            .filter(and_(MemberLoan.sg_member_id == SavingGroupMember.id,
+                         MemberLoan.sg_member_id == member.id))\
+            .join(SavingGroupCycle)\
+            .filter(and_(SavingGroupCycle.saving_group_id == member.saving_group_id,
+                         SavingGroupCycle.id == MemberLoan.sg_cycle_id,
+                         SavingGroupCycle.active == 1))\
+            .filter(MemberLoan.approved_date.is_(None))
+
+
 @api.route('/member/<int:id>/loan/', methods=['POST'])
 @json
 def new_loan_request(id):
