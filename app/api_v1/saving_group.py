@@ -163,7 +163,7 @@ def get_loan(id):
     return MemberLoan.query.get_or_404(id)
 
 
-@api.route('/member/<int:id>/loan/', methods=['GET'])
+@api.route('/member/<int:id>/loan/', methods=['POST'])
 @json
 def new_loan_request(id):
     member = SavingGroupMember.query.get_or_404(id)
