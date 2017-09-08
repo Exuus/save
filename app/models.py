@@ -173,6 +173,7 @@ class SavingGroup(db.Model):
     interest_rate = db.Column(db.Integer)
     max_share = db.Column(db.Integer)
     social_fund = db.Column(db.Integer)
+    status = db.Column(db.Integer)  # 1 Graduated | 0 Supervised
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), index=True)
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'), index=True)
     agent_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
@@ -193,6 +194,7 @@ class SavingGroup(db.Model):
             'name': self.name,
             'creation_date': self.creation_date,
             'share': self.share,
+            'status': self.status,
             'interest_rate': self.interest_rate,
             'max_share': self.max_share,
             'social_fund': self.social_fund,
@@ -208,6 +210,7 @@ class SavingGroup(db.Model):
             self.interest_rate = data['interest_rate'],
             self.max_share = data['max_share'],
             self.social_fund = data['social_fund'],
+            self.status = data['status'],
             self.organization_id = data['organization_id'],
             self.agent_id = data['agent_id'],
             self.village_id = data['village_id']
