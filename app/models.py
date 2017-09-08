@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from flask import url_for, current_app
@@ -296,10 +296,10 @@ class MemberLoan(db.Model):
         return {
             'id': self.id,
             'amount_loaned': self.amount_loaned,
-            'date': self.date,
+            'date': self.request_date,
             'interest_rate': self.interest_rate,
-            'amount_payed': self.amount_payed,
-            'date_repayment': self.date_repayment
+            'date_repayment': self.date_repayment,
+            'expect_date_repayment': self.request_date + timedelta(days=self.date_repayment)
         }
 
     def import_data(self, data):
@@ -310,6 +310,9 @@ class MemberLoan(db.Model):
         except KeyError as e:
             raise ValidationError('Invalid sg_debit_loan' + e.args[0])
         return self
+
+    def date_rep(self):
+        pass
 
 
 class MemberApprovedLoan(db.Model):
