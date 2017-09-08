@@ -177,6 +177,7 @@ class SavingGroup(db.Model):
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'), index=True)
     agent_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
     village_id = db.Column(db.Integer, db.ForeignKey('village.id'), index=True)
+
     sg_financial = db.relationship('SavingGroupFinDetails', backref='saving_group', lazy='dynamic')
     sg_member = db.relationship('SavingGroupMember', backref='saving_group', lazy='dynamic')
     sg_wallet = db.relationship('SavingGroupWallet', backref='saving_group', lazy='dynamic')
@@ -221,6 +222,7 @@ class SavingGroupWallet(db.Model):
     amount = db.Column(db.Float, default=0)
     date = db.Column(db.DateTime, default=datetime.utcnow())
     saving_group_id = db.Column(db.Integer, db.ForeignKey('saving_group.id'), index=True)
+
     member_transaction = db.relationship('SgMemberContributions', backref='sg_wallet', lazy='dynamic')
     member_loan = db.relationship('MemberLoan', backref='sg_wallet', lazy='dynamic')
 
@@ -287,6 +289,7 @@ class MemberLoan(db.Model):
     sg_cycle_id = db.Column(db.Integer, db.ForeignKey('sg_cycle.id'), index=True)
     sg_member_id = db.Column(db.Integer, db.ForeignKey('sg_member.id'), index=True)
     sg_wallet_id = db.Column(db.Integer, db.ForeignKey('sg_wallet.id'), index=True)
+
     approved = db.relationship('MemberApprovedLoan', backref='member_loan',  lazy='dynamic')
 
     def get_url(self):
