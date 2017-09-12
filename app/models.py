@@ -5,6 +5,7 @@ from flask import url_for, current_app
 from . import db
 from .exceptions import ValidationError
 from .utils import generate_code
+from sqlalchemy import and_
 
 
 class Organization(db.Model):
@@ -287,7 +288,6 @@ class MemberLoan(db.Model):
     amount_loaned = db.Column(db.Float)
     request_date = db.Column(db.DateTime, default=datetime.utcnow())
     interest_rate = db.Column(db.Integer)
-    approve_date = db.Column(db.DateTime)
     initial_date_repayment = db.Column(db.Integer)
     date_payment = db.Column(db.DateTime)
     sg_cycle_id = db.Column(db.Integer, db.ForeignKey('sg_cycle.id'), index=True)
@@ -325,30 +325,40 @@ class MemberLoan(db.Model):
 class MemberApprovedLoan(db.Model):
     __tablename__ = 'member_approved_loan'
     id = db.Column(db.Integer, primary_key=True)
-    approved = db.Column(db.Integer)  # 1 Approved 0 Declined
+    status = db.Column(db.Integer)  # 1 Approved 0 Declined # 2 Pending
     date = db.Column(db.DateTime, default=datetime.utcnow())
-    debit_loan_id = db.Column(db.Integer, db.ForeignKey('member_loan.id'), index=True)
-    committee_id = db.Column(db.Integer, db.ForeignKey('sg_member.id'), index=True)
+    status_date = db.Column(db.DateTime)
+    loan_id = db.Column(db.Integer, db.ForeignKey('member_loan.id'), index=True)
+    sg_member_id = db.Column(db.Integer, db.ForeignKey('sg_member.id'), index=True)
 
     def get_url(self):
-        return url_for('api.get_sg_approved_loan', id=self.id, _external=True)
+        return url_for('api.get_approved_loan', id=self.id, _external=True)
 
     def export_data(self):
         return {
             'self_url': self.get_url(),
             'id': self.id,
-            'approved': self.approved,
-            'debit_loan_id': self.debit_loan_id,
-            'committee_id': self.committee_id
+            'status': self.status,
+            'loan_url': url_for('api.get_loan', id=self.loan_id, _external=True),
+            'sg_member_url': url_for('api.get_sg_member', id=self.sg_member_id, _external=True)
         }
 
     def import_data(self, data):
         try:
-            self.approved = data['approved']
-            self.debit_loan_id = data['debit_loan_id']
-            self.committee_id = data['committee_id']
+            self.status = data['status']
+            self.sg_member_id = data['sg_member_id']
         except KeyError as e:
             ValidationError('Invalid sg approved loan' + e.args[0])
+        return self
+
+    def approve_loan(self):
+        self.status = 1
+        self.status_date = datetime.utcnow()
+        return self
+
+    def decline_loan(self):
+        self.status = 0
+        self.status_date = datetime.utcnow()
         return self
 
 
@@ -454,8 +464,11 @@ class SavingGroupMember(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
     pin = db.Column(db.String(128), index=True)
     date = db.Column(db.DateTime, default=datetime.utcnow())
+    admin = db.Column(db.Integer)  # 1 Admin # 0 Normal Member
+
     drop_out = db.relationship('SavingGroupDropOut', backref='sg_member', lazy='dynamic')
     member_loan = db.relationship('MemberLoan', backref='sg_member', lazy='dynamic')
+    approved_loan = db.relationship('MemberApprovedLoan', backref='sg_member', lazy='dynamic')
     db.Index('member_sg_index', saving_group_id, user_id, unique=True)
 
     def set_pin(self, pin):
@@ -471,16 +484,23 @@ class SavingGroupMember(db.Model):
         return {
             'id': self.id,
             'user_url': url_for('api.get_user', id=self.user_id, _external=True),
+            'admin': self.admin,
             'date': self.date,
             'self_url': self.get_url()
         }
 
-    def import_data(self,data):
+    def import_data(self, data):
         try:
             self.user_id = data['user_id']
+            self.admin = data['admin']
         except KeyError as e:
             raise ValidationError('Invalid sg_member '+ e.args[0])
         return self
+
+    @classmethod
+    def group_admin(cls, saving_group_id):
+        return SavingGroupMember.query.\
+                filter(and_(SavingGroupMember.saving_group_id == saving_group_id, SavingGroupMember.admin==1))
 
 
 class SavingGroupDropOut(db.Model):
