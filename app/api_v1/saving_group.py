@@ -169,14 +169,11 @@ def get_member_pending_loan(id):
     member = SavingGroupMember.query.get_or_404(id)
     if member:
         return MemberLoan.query\
-            .join(SavingGroupMember)\
-            .filter(and_(MemberLoan.sg_member_id == SavingGroupMember.id,
-                         MemberLoan.sg_member_id == member.id))\
+            .filter(MemberLoan.sg_member_id == member.id)\
             .join(SavingGroupCycle)\
-            .filter(and_(SavingGroupCycle.saving_group_id == member.saving_group_id,
-                         SavingGroupCycle.id == MemberLoan.sg_cycle_id,
-                         SavingGroupCycle.active == 1))\
-            .filter(MemberLoan.approve_date.is_(None))
+            .filter(SavingGroupCycle.saving_group_id == member.saving_group_id)\
+            .join(MemberApprovedLoan)\
+            .filter(MemberApprovedLoan.status == 2)
     return {}, 404,
 
 
@@ -291,6 +288,9 @@ def new_sg_member(id):
     saving_group = SavingGroup.query.get_or_404(id)
     member = SavingGroupMember(saving_group=saving_group)
     member.import_data(request.json)
-    db.session.add(member)
-    db.session.commit()
-    return {}, 201, {'Location': member.get_url()}
+    try:
+        db.session.add(member)
+        db.session.commit()
+        return {}, 201, {'Location': member.get_url()}
+    except IntegrityError:
+        return {}, 500
