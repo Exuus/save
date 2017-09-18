@@ -404,14 +404,14 @@ class MemberApprovedSocial(db.Model):
     sg_member_id = db.Column(db.Integer, db.ForeignKey('sg_member.id'), index=True)
 
     def get_url(self):
-        return url_for('api.get_sg_approved_social', id=self.id, _external=True)
+        return url_for('api.get_approve_social_fund', id=self.id, _external=True)
 
     def export_data(self):
         return {
             'self_url': self.get_url(),
             'id': self.id,
             'status': self.status,
-            'social_fund_url': url_for('api.get_social_fund', id=self.loan_id, _external=True),
+            'social_fund_url': url_for('api.get_social_fund', id=self.social_debit_id, _external=True),
             'sg_member_url': url_for('api.get_sg_member', id=self.sg_member_id, _external=True)
         }
 
@@ -499,7 +499,8 @@ class SavingGroupMember(db.Model):
             'user_url': url_for('api.get_user', id=self.user_id, _external=True),
             'admin': self.admin,
             'date': self.date,
-            'self_url': self.get_url()
+            'self_url': self.get_url(),
+            'sg_url': url_for('api.get_sg', id=self.saving_group_id, _external=True)
         }
 
     def import_data(self, data):
