@@ -273,6 +273,52 @@ def decline_loan(member_id, id):
     return {}, 404
 
 
+@api.route('/social-fund/<int:id>', methods=['GET'])
+@json
+def get_social_fund(id):
+    return MemberSocialFund.query.get_or_404(id)
+
+
+@api.route('/members/<int:id>/social-fund/', methods=['POST'])
+@json
+def member_social_fund_request(id):
+    member = SavingGroupMember.query.get_or_404(id)
+    admins = SavingGroupMember.group_admin(member.saving_group_id)
+
+    if member:
+        if len(admins.all()):
+            if member.verify_pin(request.json['pin']):
+                wallet = SavingGroupWallet.query. \
+                    filter(SavingGroupWallet.saving_group_id == member.saving_group_id).first()
+                cycle = SavingGroupCycle.query. \
+                    filter(and_(SavingGroupCycle.active == 1,
+                                SavingGroupCycle.saving_group_id == member.saving_group_id)). \
+                    first()
+                social_fund = MemberSocialFund(
+                    sg_cycle=cycle,
+                    sg_wallet=wallet,
+                    sg_member=member
+                )
+
+                social_fund.import_data(request.json)
+                db.session.add(social_fund)
+                db.session.commit()
+
+                """ add member approve Request """
+
+                for admin in admins:
+                    data = dict()
+                    data['status'] = 2
+                    data['sg_member_id'] = admin.export_data()['id']
+                    approve_social = MemberApprovedSocial(member_social_fund=social_fund)
+                    approve_social.import_data(data)
+                    db.session.add(approve_social)
+                    db.session.commit()
+                return {}, 201, {'Location': social_fund.get_url()}
+
+    return {}, 404
+
+
 @api.route('/sg/<int:id>/members/', methods=['GET'])
 @no_cache
 @json
