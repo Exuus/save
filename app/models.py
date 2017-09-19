@@ -242,8 +242,12 @@ class SavingGroupWallet(db.Model):
             'id': self.id,
             'amount': self.amount,
             'date': self.date,
-            'saving_group_id': self.saving_group_id,
-            'loan_url': url_for('api.get_wallet_loan', id=self.id, _external=True)
+            'sg_url': url_for('api.get_sg', id=self.saving_group_id, _external=True),
+            'loan_url': url_for('api.get_wallet_loan', id=self.id, _external=True),
+            'social_fund_debit_url': url_for('api.get_wallet_social_fund_debit', id=self.id, _external=True),
+            'social_fund_credit_url': url_for('api.get_wallet_social_fund_credit', id=self.id, _external=True),
+            'savings_url': url_for('api.get_wallet_savings', id=self.id, _external=True),
+            'self_url': self.get_url()
         }
 
     def credit_wallet(self, amount):
@@ -461,7 +465,14 @@ class SavingGroupCycle(db.Model):
             'start': self.start,
             'end': self.end,
             'active': self.active,
-            'saving_group_id': self.id
+            'self_url': self.get_url(),
+            'sg_url': url_for('api.get_sg', id=self.saving_group_id, _external=True),
+            'loan_url': url_for('api.get_cycle_loan', id=self.id, _external=True),
+            'social_fund_debit_url': url_for('api.get_cycle_social_fund_debit', id=self.id, _external=True),
+            'social_fund_credit_url': url_for('api.get_cycle_social_fund_credit', id=self.id, _external=True),
+            'savings_url': url_for('api.get_cycle_savings', id=self.id, _external=True),
+
+
         }
 
     def import_data(self, data):
