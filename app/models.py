@@ -228,7 +228,7 @@ class SavingGroupWallet(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     amount = db.Column(db.Float, default=0)
     date = db.Column(db.DateTime, default=datetime.utcnow())
-    saving_group_id = db.Column(db.Integer, db.ForeignKey('saving_group.id'), index=True)
+    saving_group_id = db.Column(db.Integer, db.ForeignKey('saving_group.id'), index=True, unique=True)
 
     member_transaction = db.relationship('SgMemberContributions', backref='sg_wallet', lazy='dynamic')
     member_loan = db.relationship('MemberLoan', backref='sg_wallet', lazy='dynamic')
