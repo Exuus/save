@@ -202,7 +202,8 @@ class SavingGroup(db.Model):
             'social_fund': self.social_fund,
             'location': self.village.export_data(),
             'members_url': url_for('api.get_sg_members', id=self.id, _external=True),
-            'cycle_url': url_for('api.get_sg_cycle', id=self.id, _external=True)
+            'cycle_url': url_for('api.get_sg_cycle', id=self.id, _external=True),
+            'wallet': url_for('api.get_sg_wallet', id=self.id, _external=True)
         }
 
     def import_data(self, data):
@@ -234,13 +235,15 @@ class SavingGroupWallet(db.Model):
     member_social = db.relationship('MemberSocialFund', backref='sg_wallet', lazy='dynamic')
 
     def get_url(self):
-        return url_for('api.get_sg_wallet', id=self.id, _external=True)
+        return url_for('api.get_wallet', id=self.id, _external=True)
 
     def export_data(self):
         return {
             'id': self.id,
             'amount': self.amount,
-            'saving_group_id': self.saving_group_id
+            'date': self.date,
+            'saving_group_id': self.saving_group_id,
+            'loan_url': url_for('api.get_wallet_loan', id=self.id, _external=True)
         }
 
     def credit_wallet(self, amount):
