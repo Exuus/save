@@ -21,5 +21,5 @@ def after_request(rv):
 
 
 from . import users, organizations, project, intervention, village, user_fin_details
-from sg import saving_group, cycle
+from sg import saving_group, cycle, wallet
 from sg.member import pin, social_fund, loan, contributions
