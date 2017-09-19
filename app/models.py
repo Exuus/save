@@ -37,7 +37,8 @@ class Organization(db.Model):
             'country': self.country,
             'agents_url': url_for('api.get_organization_agents', id=self.id, _external=True),
             'members_url': url_for('api.get_organization_members', id=self.id, _external=True),
-            'projects_url': url_for('api.get_organization_projects', id=self.id, _external=True)
+            'projects_url': url_for('api.get_organization_projects', id=self.id, _external=True),
+            'sg_url': url_for('api.get_organizations_sg', id=self.id, _external=True)
         }
 
     def import_data(self, data):
@@ -200,7 +201,8 @@ class SavingGroup(db.Model):
             'max_share': self.max_share,
             'social_fund': self.social_fund,
             'location': self.village.export_data(),
-            'members_url': url_for('api.get_sg_members', id=self.id, _external=True)
+            'members_url': url_for('api.get_sg_members', id=self.id, _external=True),
+            'cycle_url': url_for('api.get_sg_cycle', id=self.id, _external=True)
         }
 
     def import_data(self, data):
@@ -500,7 +502,11 @@ class SavingGroupMember(db.Model):
             'admin': self.admin,
             'date': self.date,
             'self_url': self.get_url(),
-            'sg_url': url_for('api.get_sg', id=self.saving_group_id, _external=True)
+            'sg_url': url_for('api.get_sg', id=self.saving_group_id, _external=True),
+            'approved_loan_url': url_for('api.get_member_approve_loan', id=self.id, _external=True),
+            'pending_loan_url': url_for('api.get_member_pending_loan', id=self.id, _external=True),
+            'approved_social_fund_url': url_for('api.get_member_approve_social_fund', id=self.id, _external=True),
+            'pending_social_fund_url': url_for('api.get_member_pending_social_fund', id=self.id, _external=True),
         }
 
     def import_data(self, data):
