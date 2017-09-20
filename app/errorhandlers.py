@@ -24,3 +24,8 @@ def method_not_supported(e):
     response.status_code = 405
     return response
 
+
+def internal_server_error():
+    response = {'status': 500, 'error': 'internal server error', 'message': 'duplicate key value'}, 500
+    return response
+
