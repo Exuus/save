@@ -62,7 +62,7 @@ class User(db.Model):
     name = db.Column(db.String(128))
     email = db.Column(db.String(60), unique=True)
     phone = db.Column(db.String(30), unique=True)
-    secondary_phone = db.Column(db.String(30), unique=True)
+    secondary_phone = db.Column(db.String(30), unique=True, nullable=True)
     type = db.Column(db.Integer) # 0 Super Admin | 1 Admin | 2 Agent | 3 Member | 4 developer account
     date = db.Column(db.DateTime, default=datetime.utcnow())
     birth_date = db.Column(db.Date)
@@ -606,6 +606,7 @@ class Project(db.Model):
     donor = db.Column(db.String(240))
     date = db.Column(db.DateTime, default=datetime.utcnow())
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
+    partner_id = db.Column(db.Integer)
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), index=True)
     intervention = db.relationship('InterventionArea', backref='project', lazy='dynamic')
     project_agent = db.relationship('ProjectAgent', backref='project', lazy='dynamic')
@@ -638,7 +639,8 @@ class Project(db.Model):
             self.end = data['end'],
             self.budget = data['budget'],
             self.donor = data['donor'],
-            self.user_id = data['user_id']
+            self.user_id = data['user_id'],
+            self.partner_id = data['partner_id']
 
         except KeyError as e:
             raise ValidationError('Invalid order: missing ' + e.args[0])
@@ -651,7 +653,6 @@ class ProjectAgent(db.Model):
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'), index=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
     date = db.Column(db.DateTime, default=datetime.utcnow())
-    db.Index('project_agent_index', project_id, user_id, unique=True)
 
     def get_url(self):
         return url_for('api.get_project_agent', id=self.id, _external=True)
