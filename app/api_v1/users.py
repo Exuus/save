@@ -3,6 +3,8 @@ from . import api
 from .. import db
 from ..models import User, Organization
 from ..decorators import json, paginate, no_cache
+from sqlalchemy.exc import IntegrityError
+from ..errorhandlers import internal_server_error
 
 
 @api.route('/users/', methods=['GET'])
@@ -42,9 +44,13 @@ def new_user(id):
     user = User(organization=organization)
     user.import_data(request.json)
     user.set_password(request.json['password'])
-    db.session.add(user)
-    db.session.commit()
-    return {}, 201, {'Location': user.get_url()}
+    try:
+        db.session.add(user)
+        db.session.commit()
+        return {}, 201, {'Location': user.get_url()}
+    except IntegrityError:
+        db.session.rollback()
+        return internal_server_error()
 
 
 @api.route('/login/', methods=['POST'])
