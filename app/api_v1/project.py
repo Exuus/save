@@ -25,7 +25,7 @@ def get_organization_projects(id):
 @paginate('projects')
 def get_users_projects(id):
     user = User.query.get_or_404(id)
-    return user.project
+    return user.project_agent
 
 
 @api.route('/project_agent/<int:id>')
