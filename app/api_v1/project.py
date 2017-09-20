@@ -13,6 +13,7 @@ def get_project(id):
 
 
 @api.route('/organizations/<int:id>/projects/', methods=['GET'])
+@no_cache
 @json
 @paginate('projects')
 def get_organization_projects(id):
@@ -21,6 +22,7 @@ def get_organization_projects(id):
 
 
 @api.route('/users/<int:id>/projects/', methods=['GET'])
+@no_cache
 @json
 @paginate('projects')
 def get_users_projects(id):
@@ -36,6 +38,7 @@ def get_project_agent(id):
 
 
 @api.route('/agent/<int:id>/projects/', methods=['GET'])
+@no_cache
 @json
 @paginate('projects')
 def get_agent_projects(id):
