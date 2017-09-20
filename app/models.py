@@ -175,6 +175,10 @@ class SavingGroup(db.Model):
     interest_rate = db.Column(db.Integer)
     max_share = db.Column(db.Integer)
     social_fund = db.Column(db.Integer)
+    social_fund_fine = db.Column(db.Integer)
+    loan_fine = db.Column(db.Integer)  # purcentage rate on initial days requested
+    meeting_absence = db.Column(db.Integer)
+    saving_fine = db.Column(db.Integer)
     status = db.Column(db.Integer)  # 1 Graduated | 0 Supervised
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), index=True)
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'), index=True)
