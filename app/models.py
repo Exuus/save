@@ -41,6 +41,11 @@ class Organization(db.Model):
             'sg_url': url_for('api.get_organizations_sg', id=self.id, _external=True)
         }
 
+    def export_member(self):
+        return {
+           'member_url': url_for('api.get_user_member', id=self.id, _external=True)
+        }
+
     def import_data(self, data):
         try:
             self.name = data['name'],
@@ -76,6 +81,7 @@ class User(db.Model):
     financial = db.relationship('UserFinDetails', backref='users', lazy='dynamic')
     project_agent = db.relationship('ProjectAgent', backref='users', lazy='dynamic')
     saving_group = db.relationship('SavingGroup', backref='users', lazy='dynamic')
+    member = db.relationship('SavingGroupMember', backref='users', lazy='dynamic')
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -179,6 +185,7 @@ class SavingGroup(db.Model):
     loan_fine = db.Column(db.Integer)  # purcentage rate on initial days requested
     meeting_absence = db.Column(db.Integer)
     saving_fine = db.Column(db.Integer)
+    attendance_fine = db.Column(db.Integer)
     status = db.Column(db.Integer)  # 1 Graduated | 0 Supervised
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), index=True)
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'), index=True)
@@ -218,6 +225,11 @@ class SavingGroup(db.Model):
             self.interest_rate = data['interest_rate'],
             self.max_share = data['max_share'],
             self.social_fund = data['social_fund'],
+            self.social_fund_fine = data['social_fund_fine'],
+            self.loan_fine = data['loan_fine'],
+            self.meeting_absence = data['meeting_absence'],
+            self.saving_fine = data['saving_fine'],
+            self.attendance_fine = data['attendance_fine'],
             self.status = data['status'],
             self.organization_id = data['organization_id'],
             self.agent_id = data['agent_id'],
@@ -570,7 +582,7 @@ class SavingGroupFinDetails(db.Model):
     __tablename__ = 'sg_fin_details'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64))
-    type = db.Column(db.Integer)  # 1 Banks # 2 MFIs # 3 Usacco # NUsacco # Telco
+    type = db.Column(db.Integer)  # 1 Banks # 2 MFIs # 3 Usacco # 4 NUsacco # 5 Telco
     account = db.Column(db.String(64))
     saving_group_id = db.Column(db.Integer, db.ForeignKey('saving_group.id'), index=True)
 
