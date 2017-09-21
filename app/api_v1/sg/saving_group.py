@@ -2,7 +2,7 @@ from flask import request
 from .. import api
 from ... import db
 from ...models import SavingGroup, SavingGroupMember, SavingGroupWallet, \
-    Project, Organization
+    Project, Organization, SavingGroupCycle, SavingGroupFinDetails
 from ...decorators import json, paginate, no_cache
 from sqlalchemy.exc import IntegrityError
 
@@ -29,18 +29,37 @@ def new_saving_group(id):
     """ SG Creations """
 
     project = Project.query.get_or_404(id)
-    sg = SavingGroup(project=project)
-    sg.import_data(request.json)
-    db.session.add(sg)
+    saving_group = SavingGroup(project=project)
+    saving_group.import_data(request.json['saving_group'])
+    db.session.add(saving_group)
     db.session.commit()
 
     """ SG  Wallet Creation """
 
-    sg_wallet = SavingGroupWallet(saving_group=sg)
+    sg_wallet = SavingGroupWallet(saving_group=saving_group)
     db.session.add(sg_wallet)
     db.session.commit()
 
-    return {}, 201, {'Location': sg.get_url()}
+    """ SG Cycle creation """
+
+    cycle = SavingGroupCycle(saving_group=saving_group)
+    cycle.import_data(request.json['cycle'])
+    try:
+        db.session.add(cycle)
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return {}, 500
+
+    """ SG Financial details creation """
+
+    for financial in request.json['financial-details']:
+        fin_details = SavingGroupFinDetails(saving_group=saving_group)
+        fin_details.import_data(financial)
+        db.session.add(fin_details)
+        db.session.commit()
+
+    return {}, 201, {'Location': saving_group.get_url()}
 
 
 @api.route('/organizations/<int:id>/sg/', methods=['GET'])
