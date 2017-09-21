@@ -1,10 +1,11 @@
 from flask import request
 from . import api
 from .. import db
-from ..models import User, Organization
+from ..models import User, Organization, SavingGroupMember
 from ..decorators import json, paginate, no_cache
 from sqlalchemy.exc import IntegrityError
 from ..errorhandlers import internal_server_error
+from sqlalchemy import or_
 
 
 @api.route('/users/', methods=['GET'])
@@ -19,6 +20,18 @@ def get_users():
 @json
 def get_user(id):
     return User.query.get_or_404(id)
+
+
+@api.route('/users/members/<phone>')
+@json
+def get_users_members(phone):
+    user = User.query.\
+        filter(or_(User.phone == phone, User.secondary_phone == phone)).\
+        filter_by(type=3).first()
+    if user:
+        return SavingGroupMember.query.\
+            filter(SavingGroupMember.user_id == user.id).first()
+    return {}, 404
 
 
 @api.route('/organizations/<int:id>/agents/', methods=['GET'])
