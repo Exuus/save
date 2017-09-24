@@ -6,7 +6,7 @@ from ....models import SavingGroupCycle, MemberFine, \
 from ....decorators import json, paginate, no_cache
 
 
-@api.route('/fine/<int:id>', methods='GET')
+@api.route('/fine/<int:id>', methods=['GET'])
 @json
 def get_fine(id):
     return MemberFine.query.get_or_404(id)
@@ -27,10 +27,14 @@ def new_member(id):
     member = SavingGroupMember.query.get_or_404(id)
     admin = SavingGroupMember.query.\
         filter(and_(SavingGroupMember.admin == 1,
-                    SavingGroupMember.id == request.json['initiate_by']))
+                    SavingGroupMember.id == request.json['initiate_by'])).first()
     if admin.verify_pin(request.json['pin']):
-        cycle = SavingGroupCycle.query.get_or_404(request.json['cycle_id'])
-        wallet = SavingGroupWallet.query.get_or_404(request.json['wallet_id'])
+        wallet = SavingGroupWallet.query. \
+            filter(SavingGroupWallet.saving_group_id == member.saving_group_id).first()
+        cycle = SavingGroupCycle.query. \
+            filter(and_(SavingGroupCycle.active == 1,
+                        SavingGroupCycle.saving_group_id == member.saving_group_id)). \
+            first()
         member_fine = MemberFine(sg_cycle=cycle,
                                  sg_member=member,
                                  sg_wallet=wallet)
