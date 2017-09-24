@@ -6,22 +6,22 @@ from ....models import SavingGroupCycle, MemberFine, \
 from ....decorators import json, paginate, no_cache
 
 
-@api.route('/fine/<int:id>', methods=['GET'])
+@api.route('/fines/<int:id>', methods=['GET'])
 @json
 def get_fine(id):
     return MemberFine.query.get_or_404(id)
 
 
-@api.route('/members/<int:id>/fine/', methods=['GET'])
+@api.route('/members/<int:id>/fines/', methods=['GET'])
 @no_cache
 @json
-@paginate('fine')
+@paginate('fines')
 def get_member_fine(id):
     member = SavingGroupMember.query.get_or_404(id)
     return member.member_fine
 
 
-@api.route('/members/<int:id>/fine/', methods=['POST'])
+@api.route('/members/<int:id>/fines/', methods=['POST'])
 @json
 def new_member(id):
     member = SavingGroupMember.query.get_or_404(id)
