@@ -517,7 +517,7 @@ class MemberFine(db.Model):
     __tablename__ = 'member_fine'
     id = db.Column(db.Integer, primary_key=True)
     status = db.Column(db.Integer, default=0)  # 1 Payed | 0 Not payed
-    type = db.Column(db.Integer)  # 1 social_fund_fine | 2 loan_fine |
+    type = db.Column(db.String(20))  # 1 social_fund_fine | 2 loan_fine |
     # 3 meeting_absence | 4 saving_fine | attendance_fine
     amount = db.Column(db.Integer)
     initialization_date = db.Column(db.DateTime, default=datetime.utcnow())
@@ -538,8 +538,9 @@ class MemberFine(db.Model):
             'amount': self.amount,
             'initialization_date': self.initialization_date,
             'payment_date': self.payment_date,
+            'self_url': self.get_url(),
             'initiator_url': url_for('api.get_sg_member', id=self.initiate_by, _external=True),
-            'member_url': url_for('api.get_member_url', id=self.member_id, _external=True)
+            'member_url': url_for('api.get_sg_member', id=self.member_id, _external=True)
         }
 
     def import_data(self, data):
