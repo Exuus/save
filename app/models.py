@@ -203,7 +203,9 @@ class SavingGroup(db.Model):
             'location': self.village.export_data(),
             'members_url': url_for('api.get_sg_members', id=self.id, _external=True),
             'cycle_url': url_for('api.get_sg_cycle', id=self.id, _external=True),
-            'wallet': url_for('api.get_sg_wallet', id=self.id, _external=True)
+            'wallet': url_for('api.get_sg_wallet', id=self.id, _external=True),
+            'shares_url': url_for('api.get_sg_current_shares', id=self.id, _external=True),
+            'fines_url': url_for('api.get_sg_current_fines', id=self.id, _external=True)
         }
 
     def import_data(self, data):
@@ -453,17 +455,18 @@ class SavingGroupFines(db.Model):
     sg_cycle_id = db.Column(db.Integer, db.ForeignKey('sg_cycle.id'), index=True)
 
     def get_url(self):
-        return url_for('api.get_sg_shares', id=self.id, _external=True)
+        return url_for('api.get_sg_current_fines', id=self.id, _external=True)
 
     def export_data(self):
         return {
-            'self_url': self.id,
+            'self_url': self.get_url(),
+            'id': self.id,
             'date': self.date,
-            'social_fund': self.social_fund,
-            'attendance': self.attendance,
-            'loan': self.loan,
-            'saving': self.saving,
-            'meeting': self.meeting
+            'social_fund_fine': self.social_fund,
+            'attendance_fine': self.attendance,
+            'loan_fine': self.loan,
+            'saving_fine': self.saving,
+            'meeting_absence': self.meeting
         }
 
     def import_data(self, data):
@@ -472,7 +475,7 @@ class SavingGroupFines(db.Model):
             self.attendance = data['attendance_fine']
             self.loan = data['loan_fine']
             self.saving = data['saving_fine']
-            self.meeting = data['meeting_fine']
+            self.meeting = data['meeting_absence']
         except KeyError as e:
             ValidationError('Invalid SavingGroupFines ' + e.args[0])
         return self
@@ -490,11 +493,12 @@ class SavingGroupShares(db.Model):
     sg_cycle_id = db.Column(db.Integer, db.ForeignKey('sg_cycle.id'), index=True)
 
     def get_url(self):
-        return url_for('api.get_sg_shares', id=self.id, _external=True)
+        return url_for('api.get_sg_current_shares', id=self.id, _external=True)
 
     def export_data(self):
         return {
             'self_url': self.get_url(),
+            'id': self.id,
             'date': self.date,
             'share': self.share,
             'interest_rate': self.interest_rate,
