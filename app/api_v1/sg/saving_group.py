@@ -3,7 +3,7 @@ from .. import api
 from ... import db
 from ...models import SavingGroup, SavingGroupMember, SavingGroupWallet, \
     Project, Organization, SavingGroupCycle, SavingGroupFinDetails, \
-    SavingGroupFines, SavingGroupShares
+    SavingGroupFines, SavingGroupShares, and_
 from ...decorators import json, paginate, no_cache
 from sqlalchemy.exc import IntegrityError
 
@@ -109,3 +109,55 @@ def new_sg_member(id):
         return {}, 201, {'Location': member.get_url()}
     except IntegrityError:
         return {}, 500
+
+
+@api.route('/sg/<int:id>/fines/', methods=['POST'])
+@json
+def new_sg_fines(id):
+    saving_group = SavingGroup.query.get_or_404(id)
+    cycle = SavingGroupCycle.query.\
+        filter(and_(SavingGroupCycle.active == 1,
+                    SavingGroupCycle.saving_group_id == saving_group.id)).first()
+
+    sg_fines = SavingGroupFines(saving_group=saving_group, sg_cycle=cycle)
+    sg_fines.import_data(request.json)
+    db.session.add(sg_fines)
+    db.session.commit()
+    return {}, 200, {'Location': sg_fines.get_url()}
+
+
+@api.route('/sg/<int:id>/fines/', methods=['GET'])
+@json
+def get_sg_current_fines(id):
+    saving_group = SavingGroup.query.get_or_404(id)
+    cycle = SavingGroupCycle.query. \
+        filter(and_(SavingGroupCycle.active == 1,
+                    SavingGroupCycle.saving_group_id == saving_group.id)).first()
+
+    return SavingGroupFines.query.filter_by(sg_cycle_id=cycle.id).first()
+
+
+@api.route('/sg/<int:id>/fines/', methods=['POST'])
+@json
+def new_sg_shares(id):
+    saving_group = SavingGroup.query.get_or_404(id)
+    cycle = SavingGroupCycle.query.\
+        filter(and_(SavingGroupCycle.active == 1,
+                    SavingGroupCycle.saving_group_id == saving_group.id)).first()
+
+    sg_shares = SavingGroupShares(saving_group=saving_group, sg_cycle=cycle)
+    sg_shares.import_data(request.json)
+    db.session.add(sg_shares)
+    db.session.commit()
+    return {}, 200, {'Location': sg_shares.get_url()}
+
+
+@api.route('/sg/<int:id>/shares/', methods=['GET'])
+@json
+def get_sg_current_shares(id):
+    saving_group = SavingGroup.query.get_or_404(id)
+    cycle = SavingGroupCycle.query.\
+        filter(and_(SavingGroupCycle.active == 1,
+                    SavingGroupCycle.saving_group_id == saving_group.id)).first()
+
+    return SavingGroupShares.query.filter_by(sg_cycle_id=cycle.id).first()
