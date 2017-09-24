@@ -182,7 +182,7 @@ class SavingGroup(db.Model):
     max_share = db.Column(db.Integer)
     social_fund = db.Column(db.Integer)
     social_fund_fine = db.Column(db.Integer)
-    loan_fine = db.Column(db.Integer)  # purcentage rate on initial days requested
+    loan_fine = db.Column(db.Integer)  # percentage rate on initial days requested
     meeting_absence = db.Column(db.Integer)
     saving_fine = db.Column(db.Integer)
     attendance_fine = db.Column(db.Integer)
@@ -211,6 +211,11 @@ class SavingGroup(db.Model):
             'interest_rate': self.interest_rate,
             'max_share': self.max_share,
             'social_fund': self.social_fund,
+            'social_fund_fine': self.social_fund_fine,
+            'loan_fine': self.loan_fine,
+            'meeting_absence': self.meeting_absence,
+            'saving_fine': self.saving_fine,
+            'attendance_fine': self.attendance_fine,
             'location': self.village.export_data(),
             'members_url': url_for('api.get_sg_members', id=self.id, _external=True),
             'cycle_url': url_for('api.get_sg_cycle', id=self.id, _external=True),
@@ -249,6 +254,7 @@ class SavingGroupWallet(db.Model):
     member_transaction = db.relationship('SgMemberContributions', backref='sg_wallet', lazy='dynamic')
     member_loan = db.relationship('MemberLoan', backref='sg_wallet', lazy='dynamic')
     member_social = db.relationship('MemberSocialFund', backref='sg_wallet', lazy='dynamic')
+    member_fine = db.relationship('MemberFine', backref='sg_wallet', lazy='dynamic')
 
     def get_url(self):
         return url_for('api.get_wallet', id=self.id, _external=True)
@@ -459,6 +465,50 @@ class MemberApprovedSocial(db.Model):
         return self
 
 
+class MemberFine(db.Model):
+    __tablename__ = 'member_fine'
+    id = db.Column(db.Integer, primary_key=True)
+    status = db.Column(db.Integer, default=0)  # 1 Payed | 0 Not payed
+    type = db.Column(db.Integer)  # 1 social_fund_fine | 2 loan_fine |
+    # 3 meeting_absence | 4 saving_fine | attendance_fine
+    amount = db.Column(db.Integer)
+    initialization_date = db.Column(db.DateTime, default=datetime.utcnow())
+    payment_date = db.Column(db.DateTime, nullable=True)
+    initiate_by = db.Column(db.Integer)  # admin member
+    member_id = db.Column(db.Integer, db.ForeignKey('sg_member.id'), index=True)
+    wallet_id = db.Column(db.Integer, db.ForeignKey('sg_wallet.id'), index=True)
+    cycle_id = db.Column(db.Integer, db.ForeignKey('sg_cycle.id'), index=True)
+
+    def get_url(self):
+        return url_for('api.get_fine', id=self.id, _external=True)
+
+    def export_data(self):
+        return {
+            'id':self.id,
+            'status': self.status,
+            'type': self.type,
+            'amount': self.amount,
+            'initialization_date': self.initialization_date,
+            'payment_date': self.payment_date,
+            'initiator_url': url_for('api.get_sg_member', id=self.initiate_by, _external=True),
+            'member_url': url_for('api.get_member_url', id=self.member_id, _external=True)
+        }
+
+    def import_data(self, data):
+        try:
+            self.type = data['type']
+            self.amount = data['amount']
+            self.initiate_by = data['initiate_by']
+        except KeyError as e:
+            ValidationError('Invalid Member Fine ' + e.args[0])
+        return self
+
+    def repay_fine(self):
+        self.status = 1
+        self.payment_date = datetime.utcnow()
+        return self
+
+
 class SavingGroupCycle(db.Model):
     __tablename__ = 'sg_cycle'
     id = db.Column(db.Integer, primary_key=True)
@@ -470,6 +520,8 @@ class SavingGroupCycle(db.Model):
     contributions = db.relationship('SgMemberContributions', backref='sg_cycle', lazy='dynamic')
     member_loan = db.relationship('MemberLoan', backref='sg_cycle', lazy='dynamic')
     member_social = db.relationship('MemberSocialFund', backref='sg_cycle', lazy='dynamic')
+    member_fine = db.relationship('MemberFine', backref='sg_cycle', lazy='dynamic')
+
     db.Index('unique_cycle', start, end, saving_group_id, unique=True)
 
     def get_url(self):
@@ -514,6 +566,7 @@ class SavingGroupMember(db.Model):
     approved_loan = db.relationship('MemberApprovedLoan', backref='sg_member', lazy='dynamic')
     member_social = db.relationship('MemberSocialFund', backref='sg_member', lazy='dynamic')
     approve_social = db.relation('MemberApprovedSocial', backref='sg_member', lazy='dynamic')
+    member_fine = db.relation('MemberFine', backref='sg_member', lazy='dynamic')
     db.Index('member_sg_index', saving_group_id, user_id, unique=True)
 
     def set_pin(self, pin):
@@ -550,7 +603,7 @@ class SavingGroupMember(db.Model):
     @classmethod
     def group_admin(cls, saving_group_id):
         return SavingGroupMember.query.\
-                filter(and_(SavingGroupMember.saving_group_id == saving_group_id, SavingGroupMember.admin==1))
+                filter(and_(SavingGroupMember.saving_group_id == saving_group_id, SavingGroupMember.admin == 1))
 
 
 class SavingGroupDropOut(db.Model):
