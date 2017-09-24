@@ -21,7 +21,7 @@ def get_member_fine(id):
     return member.member_fine
 
 
-@api.route('/members/admin/<int:id>/fine/', methods=['POST'])
+@api.route('/members/<int:id>/fine/', methods=['POST'])
 @json
 def new_member(id):
     member = SavingGroupMember.query.get_or_404(id)
