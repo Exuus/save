@@ -196,6 +196,8 @@ class SavingGroup(db.Model):
     sg_member = db.relationship('SavingGroupMember', backref='saving_group', lazy='dynamic')
     sg_wallet = db.relationship('SavingGroupWallet', backref='saving_group', lazy='dynamic')
     sg_cycle = db.relationship('SavingGroupCycle', backref='saving_group', lazy='dynamic')
+    sg_fine = db.relationship('SavingGroupFines', backref='saving_group', lazy='dynamic')
+    sg_shares = db.relationship('SavingGroupShares', backref='saving_group', lazy='dynamic')
 
     def get_url(self):
         return url_for('api.get_sg', id=self.id, _external=True)
@@ -465,6 +467,48 @@ class MemberApprovedSocial(db.Model):
         return self
 
 
+class SavingGroupFines(db.Model):
+    __tablename__ = 'sg_fines'
+    id = db.Column(db.Integer, primary_key=True)
+    date = db.Column(db.DateTime, default=datetime.utcnow())
+    type = db.Column(db.Integer, index=True)  # 1 social_fund_fine | 2 loan_fine |
+    # 3 meeting_absence | 4 saving_fine | 5 attendance_fine
+    amount = db.Column(db.Integer)
+    saving_group_id = db.Column(db.Integer, db.ForeignKey('saving_group.id'), index=True)
+    sg_cycle_id = db.Column(db.Integer, db.ForeignKey('sg_cycle.id'), index=True)
+
+    def get_url(self):
+        return url_for('api.get_sg_shares', id=self.id, _external=True)
+
+    def export_data(self):
+        return {
+            'self_url': self.id,
+            'date': self.date,
+            'type': self.type,
+            'amount': self.amount
+        }
+
+    def import_data(self, data):
+        try:
+            self.type = data['type']
+            self.amount = data['amount']
+        except KeyError as e:
+            ValidationError('Invalid sg approved loan' + e.args[0])
+        return self
+
+
+class SavingGroupShares(db.Model):
+    __tablename__ = 'saving_group_shares'
+    id = db.Column(db.Integer, primary_key=True)
+    date = db.Column(db.DateTime, default=datetime.utcnow())
+    share = db.Column(db.Integer)
+    interest_rate = db.Column(db.Integer)
+    max_share = db.Column(db.Integer)
+    social_fund = db.Column(db.Integer)
+    saving_group_id = db.Column(db.Integer, db.ForeignKey('saving_group.id'), index=True)
+    sg_cycle_id = db.Column(db.Integer, db.ForeignKey('sg_cycle.id'), index=True)
+
+
 class MemberFine(db.Model):
     __tablename__ = 'member_fine'
     id = db.Column(db.Integer, primary_key=True)
@@ -521,7 +565,8 @@ class SavingGroupCycle(db.Model):
     member_loan = db.relationship('MemberLoan', backref='sg_cycle', lazy='dynamic')
     member_social = db.relationship('MemberSocialFund', backref='sg_cycle', lazy='dynamic')
     member_fine = db.relationship('MemberFine', backref='sg_cycle', lazy='dynamic')
-
+    sg_fines = db.relationship('SavingGroupFines', backref='sg_cycle', lazy='dynamic')
+    sg_shares = db.relationship('SavingGroupShares', backref='sg_cycle', lazy='dynamic')
     db.Index('unique_cycle', start, end, saving_group_id, unique=True)
 
     def get_url(self):
