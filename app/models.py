@@ -177,15 +177,6 @@ class SavingGroup(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), unique=True)
     creation_date = db.Column(db.Date)
-    share = db.Column(db.Integer)
-    interest_rate = db.Column(db.Integer)
-    max_share = db.Column(db.Integer)
-    social_fund = db.Column(db.Integer)
-    social_fund_fine = db.Column(db.Integer)
-    loan_fine = db.Column(db.Integer)  # percentage rate on initial days requested
-    meeting_absence = db.Column(db.Integer)
-    saving_fine = db.Column(db.Integer)
-    attendance_fine = db.Column(db.Integer)
     status = db.Column(db.Integer)  # 1 Graduated | 0 Supervised
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), index=True)
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'), index=True)
@@ -208,16 +199,7 @@ class SavingGroup(db.Model):
             'id': self.id,
             'name': self.name,
             'creation_date': self.creation_date,
-            'share': self.share,
             'status': self.status,
-            'interest_rate': self.interest_rate,
-            'max_share': self.max_share,
-            'social_fund': self.social_fund,
-            'social_fund_fine': self.social_fund_fine,
-            'loan_fine': self.loan_fine,
-            'meeting_absence': self.meeting_absence,
-            'saving_fine': self.saving_fine,
-            'attendance_fine': self.attendance_fine,
             'location': self.village.export_data(),
             'members_url': url_for('api.get_sg_members', id=self.id, _external=True),
             'cycle_url': url_for('api.get_sg_cycle', id=self.id, _external=True),
@@ -228,15 +210,6 @@ class SavingGroup(db.Model):
         try:
             self.name = data['name'],
             self.creation_date = datetime.strptime(data['creation_date'], "%Y-%m-%d").date()
-            self.share = data['share'],
-            self.interest_rate = data['interest_rate'],
-            self.max_share = data['max_share'],
-            self.social_fund = data['social_fund'],
-            self.social_fund_fine = data['social_fund_fine'],
-            self.loan_fine = data['loan_fine'],
-            self.meeting_absence = data['meeting_absence'],
-            self.saving_fine = data['saving_fine'],
-            self.attendance_fine = data['attendance_fine'],
             self.status = data['status'],
             self.organization_id = data['organization_id'],
             self.agent_id = data['agent_id'],
@@ -471,9 +444,11 @@ class SavingGroupFines(db.Model):
     __tablename__ = 'sg_fines'
     id = db.Column(db.Integer, primary_key=True)
     date = db.Column(db.DateTime, default=datetime.utcnow())
-    type = db.Column(db.Integer, index=True)  # 1 social_fund_fine | 2 loan_fine |
-    # 3 meeting_absence | 4 saving_fine | 5 attendance_fine
-    amount = db.Column(db.Integer)
+    social_fund = db.Column(db.Integer)
+    attendance = db.Column(db.Integer)
+    loan = db.Column(db.Integer)
+    saving = db.Column(db.Integer)
+    meeting = db.Column(db.Integer)
     saving_group_id = db.Column(db.Integer, db.ForeignKey('saving_group.id'), index=True)
     sg_cycle_id = db.Column(db.Integer, db.ForeignKey('sg_cycle.id'), index=True)
 
@@ -484,16 +459,22 @@ class SavingGroupFines(db.Model):
         return {
             'self_url': self.id,
             'date': self.date,
-            'type': self.type,
-            'amount': self.amount
+            'social_fund': self.social_fund,
+            'attendance': self.attendance,
+            'loan': self.loan,
+            'saving': self.saving,
+            'meeting': self.meeting
         }
 
     def import_data(self, data):
         try:
-            self.type = data['type']
-            self.amount = data['amount']
+            self.social_fund = data['social_fund_fine']
+            self.attendance = data['attendance_fine']
+            self.loan = data['loan_fine']
+            self.saving = data['saving_fine']
+            self.meeting = data['meeting_fine']
         except KeyError as e:
-            ValidationError('Invalid sg approved loan' + e.args[0])
+            ValidationError('Invalid SavingGroupFines ' + e.args[0])
         return self
 
 
@@ -507,6 +488,29 @@ class SavingGroupShares(db.Model):
     social_fund = db.Column(db.Integer)
     saving_group_id = db.Column(db.Integer, db.ForeignKey('saving_group.id'), index=True)
     sg_cycle_id = db.Column(db.Integer, db.ForeignKey('sg_cycle.id'), index=True)
+
+    def get_url(self):
+        return url_for('api.get_sg_shares', id=self.id, _external=True)
+
+    def export_data(self):
+        return {
+            'self_url': self.get_url(),
+            'date': self.date,
+            'share': self.share,
+            'interest_rate': self.interest_rate,
+            'max_share': self.max_share,
+            'social_fund': self.social_fund
+        }
+
+    def import_data(self, data):
+        try:
+            self.share = data['share'],
+            self.interest_rate = data['interest_rate'],
+            self.max_share = data['max_share'],
+            self.social_fund = data['social_fund']
+        except KeyError as e:
+            ValidationError('Invalid SavingGroupShares' + e.args[0])
+        return self
 
 
 class MemberFine(db.Model):
