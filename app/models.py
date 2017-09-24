@@ -644,6 +644,7 @@ class SavingGroupMember(db.Model):
             'pending_loan_url': url_for('api.get_member_pending_loan', id=self.id, _external=True),
             'approved_social_fund_url': url_for('api.get_member_approve_social_fund', id=self.id, _external=True),
             'pending_social_fund_url': url_for('api.get_member_pending_social_fund', id=self.id, _external=True),
+            'member_fine': url_for('api.get_member_fine', id=self.id, _external=True)
         }
 
     def import_data(self, data):
