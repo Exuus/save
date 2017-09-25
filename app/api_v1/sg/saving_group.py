@@ -169,7 +169,7 @@ def new_sg_shares(id):
         return internal_server_error()
 
 
-@api.route('/shares/<int:id>', methods=['PUT'])
+@api.route('/shares/<int:id>/', methods=['PUT'])
 @json
 def edit_shares(id):
     shares = SavingGroupShares.query.get_or_404(id)
