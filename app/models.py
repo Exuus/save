@@ -453,6 +453,7 @@ class SavingGroupFines(db.Model):
     meeting = db.Column(db.Integer)
     saving_group_id = db.Column(db.Integer, db.ForeignKey('saving_group.id'), index=True)
     sg_cycle_id = db.Column(db.Integer, db.ForeignKey('sg_cycle.id'), index=True)
+    db.Index('unique_fine', saving_group_id, sg_cycle_id, unique=True)
 
     def get_url(self):
         return url_for('api.get_sg_current_fines', id=self.id, _external=True)
@@ -491,6 +492,7 @@ class SavingGroupShares(db.Model):
     social_fund = db.Column(db.Integer)
     saving_group_id = db.Column(db.Integer, db.ForeignKey('saving_group.id'), index=True)
     sg_cycle_id = db.Column(db.Integer, db.ForeignKey('sg_cycle.id'), index=True)
+    db.Index('unique_share', saving_group_id, sg_cycle_id, unique=True)
 
     def get_url(self):
         return url_for('api.get_sg_current_shares', id=self.id, _external=True)
