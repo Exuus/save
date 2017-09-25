@@ -6,6 +6,7 @@ from ...models import SavingGroup, SavingGroupMember, SavingGroupWallet, \
     SavingGroupFines, SavingGroupShares, and_
 from ...decorators import json, paginate, no_cache
 from sqlalchemy.exc import IntegrityError
+from ...errorhandlers import internal_server_error
 
 
 @api.route('/sg/<int:id>/', methods=['GET'])
@@ -37,7 +38,7 @@ def new_saving_group(id):
         db.session.commit()
     except IntegrityError:
         db.session.rollback()
-        return {}, 500
+        return internal_server_error()
 
     """ SG  Wallet Creation """
 
@@ -54,7 +55,7 @@ def new_saving_group(id):
         db.session.commit()
     except IntegrityError:
         db.session.rollback()
-        return {}, 500
+        return internal_server_error()
 
     """ SG Financial details creation """
 
@@ -108,7 +109,7 @@ def new_sg_member(id):
         db.session.commit()
         return {}, 201, {'Location': member.get_url()}
     except IntegrityError:
-        return {}, 500
+        return internal_server_error()
 
 
 @api.route('/sg/<int:id>/fines/', methods=['POST'])
@@ -121,9 +122,22 @@ def new_sg_fines(id):
 
     sg_fines = SavingGroupFines(saving_group=saving_group, sg_cycle=cycle)
     sg_fines.import_data(request.json)
-    db.session.add(sg_fines)
+    try:
+        db.session.add(sg_fines)
+        db.session.commit()
+        return {}, 200, {'Location': sg_fines.get_url()}
+    except IntegrityError:
+        return internal_server_error()
+
+
+@api.route('/fines/<int:id>/', methods=['PUT'])
+@json
+def edit_fines(id):
+    fines = SavingGroupFines.query.get_or_404(id)
+    fines.import_data(request.json)
+    db.session.add(fines)
     db.session.commit()
-    return {}, 200, {'Location': sg_fines.get_url()}
+    return {}, 200
 
 
 @api.route('/sg/<int:id>/fines/', methods=['GET'])
@@ -137,7 +151,7 @@ def get_sg_current_fines(id):
     return SavingGroupFines.query.filter_by(sg_cycle_id=cycle.id).first()
 
 
-@api.route('/sg/<int:id>/fines/', methods=['POST'])
+@api.route('/sg/<int:id>/shares/', methods=['POST'])
 @json
 def new_sg_shares(id):
     saving_group = SavingGroup.query.get_or_404(id)
@@ -147,9 +161,22 @@ def new_sg_shares(id):
 
     sg_shares = SavingGroupShares(saving_group=saving_group, sg_cycle=cycle)
     sg_shares.import_data(request.json)
-    db.session.add(sg_shares)
+    try:
+        db.session.add(sg_shares)
+        db.session.commit()
+        return {}, 200, {'Location': sg_shares.get_url()}
+    except IntegrityError:
+        return internal_server_error()
+
+
+@api.route('/shares/<int:id>', methods=['PUT'])
+@json
+def edit_shares(id):
+    shares = SavingGroupShares.query.get_or_404(id)
+    shares.import_data(request.json)
+    db.session.add(shares)
     db.session.commit()
-    return {}, 200, {'Location': sg_shares.get_url()}
+    return {}, 200
 
 
 @api.route('/sg/<int:id>/shares/', methods=['GET'])
