@@ -6,7 +6,7 @@ from ....models import SavingGroupCycle, MemberFine, \
 from ....decorators import json, paginate, no_cache
 
 
-@api.route('/fines/<int:id>', methods=['GET'])
+@api.route('/fines/<int:id>/', methods=['GET'])
 @json
 def get_fine(id):
     return MemberFine.query.get_or_404(id)
