@@ -23,7 +23,10 @@ def json(f):
         # if the response was a database model, then convert it to a
         # dictionary
         if not isinstance(rv, dict):
-            rv = rv.export_data()
+            try:
+                rv = rv.export_data()
+            except AttributeError:
+                return jsonify(rv)
 
         # generate the JSON response
         rv = jsonify(rv)
