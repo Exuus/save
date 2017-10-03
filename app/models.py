@@ -5,7 +5,7 @@ from flask import url_for, current_app
 from . import db
 from .exceptions import ValidationError
 from .utils import generate_code
-from sqlalchemy import and_
+from sqlalchemy import and_, func
 
 
 class Organization(db.Model):
@@ -68,7 +68,7 @@ class User(db.Model):
     email = db.Column(db.String(60), unique=True)
     phone = db.Column(db.String(30), unique=True)
     secondary_phone = db.Column(db.String(30), unique=True, nullable=True)
-    type = db.Column(db.Integer) # 0 Super Admin | 1 Admin | 2 Agent | 3 Member | 4 developer account
+    type = db.Column(db.Integer)  # 0 Super Admin | 1 Admin | 2 Agent | 3 Member | 4 developer account
     date = db.Column(db.DateTime, default=datetime.utcnow())
     birth_date = db.Column(db.Date)
     gender = db.Column(db.Integer)  # 0 Male # 1 Female
@@ -289,6 +289,20 @@ class SgMemberContributions(db.Model):
         except KeyError as e:
             raise ValidationError('Invalid SgMemberContributions ' + e.args[0])
         return self
+
+    @classmethod
+    def sum_savings(cls, member_id):
+        return db.session.\
+            query(func.sum(SgMemberContributions.amount).label('amount')). \
+            filter(and_(SgMemberContributions.sg_member_id == member_id,
+                        SgMemberContributions.type == 1)).first()
+
+    @classmethod
+    def sum_social_fund(cls, member_id):
+        return db.session. \
+            query(func.sum(SgMemberContributions.amount).label('amount')). \
+            filter(and_(SgMemberContributions.sg_member_id == member_id,
+                        SgMemberContributions.type == 2)).first()
 
 
 class MemberLoan(db.Model):
@@ -621,8 +635,9 @@ class SavingGroupMember(db.Model):
     member_loan = db.relationship('MemberLoan', backref='sg_member', lazy='dynamic')
     approved_loan = db.relationship('MemberApprovedLoan', backref='sg_member', lazy='dynamic')
     member_social = db.relationship('MemberSocialFund', backref='sg_member', lazy='dynamic')
-    approve_social = db.relation('MemberApprovedSocial', backref='sg_member', lazy='dynamic')
-    member_fine = db.relation('MemberFine', backref='sg_member', lazy='dynamic')
+    approve_social = db.relationship('MemberApprovedSocial', backref='sg_member', lazy='dynamic')
+    member_fine = db.relationship('MemberFine', backref='sg_member', lazy='dynamic')
+    member_contribution = db.relationship('SgMemberContributions', backref='sg_member', lazy='dynamic')
     db.Index('member_sg_index', saving_group_id, user_id, unique=True)
 
     def set_pin(self, pin):
