@@ -34,6 +34,20 @@ def get_member_social_fund(id):
                 SavingGroupCycle.active == 1)
 
 
+@api.route('/member/<int:id>/balance/')
+@json
+def get_member_balance(id):
+    member = SavingGroupMember.query.get_or_404(id)
+    savings = SgMemberContributions.sum_savings(member.id)
+    social_fund = SgMemberContributions.sum_social_fund(member.id)
+    import pdb; pdb.set_trace()
+
+    return {
+        "savings": savings[0],
+        "social_fund": social_fund[0]
+    }
+
+
 @api.route('/member/<int:id>/contributions/', methods=['POST'])
 @json
 def new_member_savings(id):
