@@ -40,11 +40,10 @@ def get_member_balance(id):
     member = SavingGroupMember.query.get_or_404(id)
     savings = SgMemberContributions.sum_savings(member.id)
     social_fund = SgMemberContributions.sum_social_fund(member.id)
-    import pdb; pdb.set_trace()
 
     return {
-        "savings": savings[0],
-        "social_fund": social_fund[0]
+        "savings": 0 if not savings[0] else savings[0],
+        "social_fund": 0 if not social_fund[0] else social_fund[0]
     }
 
 
