@@ -257,6 +257,11 @@ class SavingGroupWallet(db.Model):
         self.amount = self.amount + float(amount)
         return self
 
+    @classmethod
+    def wallet(cls, saving_group_id):
+        return SavingGroupWallet.query. \
+            filter(SavingGroupWallet.saving_group_id == saving_group_id).first()
+
 
 class SgMemberContributions(db.Model):
     __tablename__ = 'sg_member_contributions'
@@ -272,12 +277,16 @@ class SgMemberContributions(db.Model):
     def get_url(self):
         return url_for('api.get_contribution', id=self.id, _external=True)
 
+    def get_operator(self):
+        operators = ['MTN', 'TIGO', 'AIRTEL']
+        return operators[self.operator - 1]
+
     def export_data(self):
         return {
             'id': self.id,
             'amount': self.amount,
-            'operator': self.operator,
-            'type': self.type,
+            'operator': self.get_operator(),
+            'type': "Saving" if self.type == 1 else "Social fund",
             'date': self.date
         }
 
@@ -620,6 +629,12 @@ class SavingGroupCycle(db.Model):
         except KeyError as e:
             raise ValidationError('Invalid Cycle ' + e.args[0])
         return self
+
+    @classmethod
+    def current_cycle(cls, saving_group_id):
+        return SavingGroupCycle.query.\
+            filter(and_(SavingGroupCycle.active == 1,
+                        SavingGroupCycle.saving_group_id == saving_group_id)).first()
 
 
 class SavingGroupMember(db.Model):
