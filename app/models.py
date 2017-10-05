@@ -693,6 +693,11 @@ class SavingGroupMember(db.Model):
                 filter(and_(SavingGroupMember.saving_group_id == saving_group_id, SavingGroupMember.admin == 1))
 
 
+class MemberMiniStatement(db.Model):
+    __tablename__ = 'members_mini_statement'
+    id = db.Column(db.Integer, primary_key=True)
+
+
 class SavingGroupDropOut(db.Model):
     __tablename__ = 'sg_drop_out'
     id = db.Column(db.Integer, primary_key=True)
