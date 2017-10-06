@@ -2,7 +2,7 @@ from flask import request
 from ... import api
 from .... import db
 from ....models import SavingGroupCycle, SgMemberContributions, \
-    SavingGroupMember, and_, SavingGroupWallet
+    SavingGroupMember, and_, SavingGroupWallet, MemberMiniStatement
 from ....decorators import json, paginate, no_cache
 
 
@@ -66,8 +66,16 @@ def new_member_savings(id):
                                                   sg_member=member)
             contributions.import_data(data)
             wallet.credit_wallet(data['amount'])
+
+            mini_statement_json = dict()
+            mini_statement_json['amount'] = data['amount']
+            mini_statement_json['type'] = data['type']
+            mini_statement = MemberMiniStatement(sg_member=member)
+            mini_statement.import_data(mini_statement_json)
+
             db.session.add(contributions)
             db.session.add(wallet)
+            db.session.add(mini_statement)
             db.session.commit()
             return {}, 201, {'Location': contributions.get_url()}
 
