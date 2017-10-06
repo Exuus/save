@@ -6,6 +6,7 @@ from . import db
 from .exceptions import ValidationError
 from .utils import generate_code
 from sqlalchemy import and_, func
+import arrow
 
 
 class Organization(db.Model):
@@ -711,8 +712,10 @@ class MemberMiniStatement(db.Model):
             'id': self.id,
             'amount': self.amount,
             'type': self.mini_statement_type(),
-            'date': self.date,
-            'member_id': self.member_id
+            'date': arrow.get(self.date).to('Africa/Kigali').humanize(),
+            'member_id': self.member_id,
+            'statement': self.statement(),
+            'self_url': self.get_url()
         }
 
     def import_data(self, data):
@@ -726,6 +729,10 @@ class MemberMiniStatement(db.Model):
     def mini_statement_type(self):
         data = ['Savings', 'Social Fund', 'Loan', 'Debit Social Fund', 'Fine']
         return data[self.type - 1]
+
+    def statement(self):
+        date = arrow.get(self.date).to('Africa/Kigali').humanize()
+        return '{} {} {}'.format(date, self.mini_statement_type(), self.amount)
 
 
 class SavingGroupDropOut(db.Model):
