@@ -714,6 +714,7 @@ class MemberMiniStatement(db.Model):
             'type': self.mini_statement_type(),
             'date': arrow.get(self.date).to('Africa/Kigali').humanize(),
             'member_id': self.member_id,
+            'member_url': url_for('api.get_sg_member', id=self.member_id, _external=True),
             'statement': self.statement(),
             'self_url': self.get_url()
         }
