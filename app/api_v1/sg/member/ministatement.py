@@ -1,20 +1,19 @@
-from flask import request
 from ... import api
-from .... import db
-from ....models import SavingGroupMember, SavingGroupWallet, \
-    MemberLoan, MemberFine, SgMemberContributions, SavingGroupCycle, and_
+from ....models import SavingGroupMember, MemberMiniStatement
 from ....decorators import json, paginate, no_cache
 
 
-@api.route('/members/<int:id>/mini-statement/contributions/')
+@api.route('/mini-statement/<int:id>/')
+@json
+def get_mini_statement(id):
+    return MemberMiniStatement.query.get_or_404(id)
+
+
+@api.route('/members/<int:id>/mini-statement/')
 @no_cache
 @json
-@paginate('mini_statement_contributions')
+@paginate('mini_statement')
 def get_members_mini_statement(id):
     member = SavingGroupMember.query.get_or_404(id)
-    wallet = SavingGroupWallet.wallet(member.saving_group_id)
-    cycle = SavingGroupCycle.current_cycle(member.saving_group_id)
-    return member.member_contribution.\
-        join(SavingGroupCycle, SavingGroupWallet).\
-        filter(and_(SgMemberContributions.sg_cycle_id == cycle.id,
-                    SgMemberContributions.sg_wallet_id == wallet.id))
+    return member.member_mini_statement
+
