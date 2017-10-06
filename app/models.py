@@ -653,6 +653,8 @@ class SavingGroupMember(db.Model):
     approve_social = db.relationship('MemberApprovedSocial', backref='sg_member', lazy='dynamic')
     member_fine = db.relationship('MemberFine', backref='sg_member', lazy='dynamic')
     member_contribution = db.relationship('SgMemberContributions', backref='sg_member', lazy='dynamic')
+    member_mini_statement = db.relationship('MemberMiniStatement', backref='sg_member', lazy='dynamic')
+
     db.Index('member_sg_index', saving_group_id, user_id, unique=True)
 
     def set_pin(self, pin):
@@ -696,6 +698,30 @@ class SavingGroupMember(db.Model):
 class MemberMiniStatement(db.Model):
     __tablename__ = 'members_mini_statement'
     id = db.Column(db.Integer, primary_key=True)
+    amount = db.Column(db.Float)
+    type = db.Column(db.Integer)  # 1 Savings | 2 Social Fund | 3 Loan | 4 Debit Social Fund | 5 Fine
+    date = db.Column(db.DateTime, default=datetime.utcnow())
+    member_id = db.Column(db.Integer, db.ForeignKey('sg_member.id'), index=True)
+
+    def get_url(self):
+        return url_for('api.get_mini_statement', id=self.id, _external=True)
+
+    def export_data(self):
+        return {
+            'id': self.id,
+            'amount': self.amount,
+            'type': self.type,
+            'date': self.date,
+            'member_id': self.member_id
+        }
+
+    def import_data(self, data):
+        try:
+            self.amount = data['amount']
+            self.type = data['type']
+        except KeyError as e:
+            raise ValidationError('Invalid MemberMiniStatement ' + e.args[0])
+        return self
 
 
 class SavingGroupDropOut(db.Model):
