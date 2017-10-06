@@ -710,7 +710,7 @@ class MemberMiniStatement(db.Model):
         return {
             'id': self.id,
             'amount': self.amount,
-            'type': self.type,
+            'type': self.mini_statement_type(),
             'date': self.date,
             'member_id': self.member_id
         }
@@ -722,6 +722,10 @@ class MemberMiniStatement(db.Model):
         except KeyError as e:
             raise ValidationError('Invalid MemberMiniStatement ' + e.args[0])
         return self
+
+    def mini_statement_type(self):
+        data = ['Savings', 'Social Fund', 'Loan', 'Debit Social Fund', 'Fine']
+        return data[self.type - 1]
 
 
 class SavingGroupDropOut(db.Model):
