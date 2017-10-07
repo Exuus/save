@@ -59,7 +59,7 @@ def new_saving_group(id):
 
     """ SG Financial details creation """
 
-    for financial in request.json['financial-details']:
+    for financial in request.json['financial_details']:
         fin_details = SavingGroupFinDetails(saving_group=saving_group)
         fin_details.import_data(financial)
         db.session.add(fin_details)
