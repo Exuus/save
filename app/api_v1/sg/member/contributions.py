@@ -29,7 +29,7 @@ def get_member_savings(id):
 @paginate('member_social_fund')
 def get_member_social_fund(id):
     member = SavingGroupMember.query.get_or_404(id)
-    return member.contributions.filter_by(SgMemberContributions.type==2).join(SavingGroupCycle)\
+    return member.contribution.filter(SgMemberContributions.type == 2).join(SavingGroupCycle) \
         .filter(and_(SavingGroupCycle.id == SgMemberContributions.sg_cycle_id),
                 SavingGroupCycle.active == 1)
 
