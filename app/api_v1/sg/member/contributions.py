@@ -12,29 +12,29 @@ def get_contribution(id):
     return SgMemberContributions.query.get_or_404(id)
 
 
-@api.route('/member/<int:id>/savings/')
+@api.route('/members/<int:id>/savings/')
 @no_cache
 @json
 @paginate('member_savings')
 def get_member_savings(id):
     member = SavingGroupMember.query.get_or_404(id)
-    return member.contributions.filter_by(type=1).join(SavingGroupCycle)\
+    return member.contribution.filter(SgMemberContributions.type == 1).join(SavingGroupCycle)\
         .filter(and_(SavingGroupCycle.id == SgMemberContributions.sg_cycle_id),
                 SavingGroupCycle.active == 1)
 
 
-@api.route('/member/<int:id>/social-fund/')
+@api.route('/members/<int:id>/social-fund/')
 @no_cache
 @json
 @paginate('member_social_fund')
 def get_member_social_fund(id):
     member = SavingGroupMember.query.get_or_404(id)
-    return member.contributions.filter_by(type=2).join(SavingGroupCycle)\
+    return member.contributions.filter_by(SgMemberContributions.type==2).join(SavingGroupCycle)\
         .filter(and_(SavingGroupCycle.id == SgMemberContributions.sg_cycle_id),
                 SavingGroupCycle.active == 1)
 
 
-@api.route('/member/<int:id>/balance/')
+@api.route('/members/<int:id>/balance/')
 @json
 def get_member_balance(id):
     member = SavingGroupMember.query.get_or_404(id)
@@ -47,7 +47,7 @@ def get_member_balance(id):
     }
 
 
-@api.route('/member/<int:id>/contributions/', methods=['POST'])
+@api.route('/members/<int:id>/contributions/', methods=['POST'])
 @json
 def new_member_savings(id):
     data = request.json
