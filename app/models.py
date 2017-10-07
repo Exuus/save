@@ -542,6 +542,9 @@ class SavingGroupShares(db.Model):
             ValidationError('Invalid SavingGroupShares' + e.args[0])
         return self
 
+    def calculate_shares(self, savings):
+        return round(float(savings/self.share), 1)
+
 
 class MemberFine(db.Model):
     __tablename__ = 'member_fine'
@@ -653,7 +656,7 @@ class SavingGroupMember(db.Model):
     member_social = db.relationship('MemberSocialFund', backref='sg_member', lazy='dynamic')
     approve_social = db.relationship('MemberApprovedSocial', backref='sg_member', lazy='dynamic')
     member_fine = db.relationship('MemberFine', backref='sg_member', lazy='dynamic')
-    member_contribution = db.relationship('SgMemberContributions', backref='sg_member', lazy='dynamic')
+    contribution = db.relationship('SgMemberContributions', backref='sg_member', lazy='dynamic')
     member_mini_statement = db.relationship('MemberMiniStatement', backref='sg_member', lazy='dynamic')
 
     db.Index('member_sg_index', saving_group_id, user_id, unique=True)
@@ -679,7 +682,10 @@ class SavingGroupMember(db.Model):
             'pending_loan_url': url_for('api.get_member_pending_loan', id=self.id, _external=True),
             'approved_social_fund_url': url_for('api.get_member_approve_social_fund', id=self.id, _external=True),
             'pending_social_fund_url': url_for('api.get_member_pending_social_fund', id=self.id, _external=True),
-            'member_fine': url_for('api.get_member_fine', id=self.id, _external=True)
+            'member_fine': url_for('api.get_member_fine', id=self.id, _external=True),
+            'member_savings_url': url_for('api.get_member_savings', id=self.id, _external=True),
+            'member_social_fund_url': url_for('api.get_member_social_fund', id=self.id, _external=True),
+            'member_shares': url_for('api.get_member_shares', id=self.id, _external=True)
         }
 
     def import_data(self, data):
