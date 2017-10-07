@@ -1,6 +1,6 @@
 from ... import api
 from ....models import SavingGroupMember, SgMemberContributions, SavingGroup, \
-    SavingGroupCycle, SavingGroupShares, and_
+    SavingGroupCycle, SavingGroupShares
 from ....decorators import json, paginate, no_cache
 
 
