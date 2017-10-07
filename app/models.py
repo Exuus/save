@@ -22,6 +22,7 @@ class Organization(db.Model):
     users = db.relationship('User', backref='organization', lazy='dynamic')
     project = db.relationship('Project', backref='organization', lazy='dynamic')
     saving_group = db.relationship('SavingGroup', backref='organization', lazy='dynamic')
+    project_partner = db.relationship('ProjectPartner', backref='organization', lazy='dynamic')
 
     def get_url(self):
         return url_for('api.get_organization', id=self.id, _external=True)
@@ -812,6 +813,7 @@ class Project(db.Model):
     intervention = db.relationship('InterventionArea', backref='project', lazy='dynamic')
     project_agent = db.relationship('ProjectAgent', backref='project', lazy='dynamic')
     saving_group = db.relationship('SavingGroup', backref='project', lazy='dynamic')
+    project_partner = db.relationship('ProjectPartner', backref='project', lazy='dynamic')
 
     def get_url(self):
         return url_for('api.get_project', id=self.id, _external=True)
@@ -829,7 +831,8 @@ class Project(db.Model):
             'user_id': self.user_id,
             'organization_url': self.organization.get_url(),
             'intervention_area_url': url_for('api.get_project_intervention_area', id=self.id, _external=True),
-            'saving_groups_url': url_for('api.get_project_sgs', id=self.id, _external=True)
+            'saving_groups_url': url_for('api.get_project_sgs', id=self.id, _external=True),
+            'intl_ngo_url': url_for('api.get_organization', id=self.id, _external=True)
 
         }
 
@@ -870,6 +873,24 @@ class ProjectAgent(db.Model):
         except KeyError as e:
             raise ValidationError('Invalid ProjectAgent: missing ' + e.args[0])
         return self
+
+
+class ProjectPartner(db.Model):
+    __tablename__ = 'project_partner'
+    id = db.Column(db.Integer, primary_key=True)
+    project_id = db.Column(db.Integer, db.ForeignKey('project.id'), index=True)
+    partner_id = db.Column(db.Integer, db.ForeignKey('organization.id'))
+    date = db.Column(db.DateTime, default=datetime.utcnow())
+
+    def get_url(self):
+        return url_for('api.get_project_partner', id=self.id, _external=True)
+
+    def export_data(self):
+        return {
+            'project_url': url_for('api.get_project', id=self.project_id, _external=True),
+            'partner_url': url_for('api.get_organization', id=self.partner_id, _external=True),
+            'date': self.date
+        }
 
 
 class InterventionArea(db.Model):
