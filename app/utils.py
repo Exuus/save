@@ -38,3 +38,22 @@ def split_url(url, method='GET'):
 def generate_code():
     code = '-'.join(map(str, random.sample(range(1, 1000), 3)))
     return code
+
+
+def generate_username(names):
+    names = names.split(" ")
+    first_letter = names[0][0]
+    three_letters_surname = names[-1][:3]
+    number = '{:03d}'.format(random.randrange(1, 999))
+    username = (first_letter + three_letters_surname + number)
+    return username
+
+
+def generate_email(names):
+    names = names.split(" ")
+    first_letter = names[0][0]
+    three_letters_surname = names[-1][:3]
+    number = '{:03d}'.format(random.randrange(1, 999))
+    username = (first_letter + three_letters_surname + number)
+    return username + "@getsave.io"
+
