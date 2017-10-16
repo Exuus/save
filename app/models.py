@@ -4,7 +4,7 @@ from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from flask import url_for, current_app
 from . import db
 from .exceptions import ValidationError
-from .utils import generate_code
+from .utils import generate_code, generate_username, generate_email
 from sqlalchemy import and_, func
 import arrow
 
@@ -64,18 +64,18 @@ class Organization(db.Model):
 class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(64), index=True, unique=True)
+    username = db.Column(db.String(64), index=True, unique=True, nullable=True)
     password_hash = db.Column(db.String(128))
     name = db.Column(db.String(128))
     email = db.Column(db.String(60), unique=True)
     phone = db.Column(db.String(30), unique=True)
-    secondary_phone = db.Column(db.String(30), unique=True, nullable=True)
     type = db.Column(db.Integer)  # 0 Super Admin | 1 Admin | 2 Agent | 3 Member | 4 developer account
     date = db.Column(db.DateTime, default=datetime.utcnow())
     birth_date = db.Column(db.Date)
     gender = db.Column(db.Integer)  # 0 Male # 1 Female
-    education = db.Column(db.String(64))
-    location = db.Column(db.String(128))
+    education = db.Column(db.String(64), nullable=True)
+    id_number = db.Column(db.String(60), unique=True, nullable=True)
+    location = db.Column(db.String(128), default='no location')
     first_login = db.Column(db.Integer, default=1)  # 1 never logged in # 0 already logged in
     confirmation_code = db.Column(db.String(12), default=generate_code())
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), index=True)
@@ -106,7 +106,6 @@ class User(db.Model):
             'name': self.name,
             'email': self.email,
             'phone': self.phone,
-            'secondary_phone': self.phone,
             'date': self.date,
             'type': self.type,
             'birth_date': self.birth_date,
@@ -120,15 +119,19 @@ class User(db.Model):
 
     def import_data(self, data):
         try:
-            self.username = data['username'],
-            self.name = data['name'],
-            self.email = data['email'],
-            self.phone = data['phone'],
-            self.secondary_phone = data['secondary_phone'],
-            self.type = data['type'],
-            self.birth_date = datetime.strptime(data['birth_date'], "%Y-%m-%d").date(),
-            self.gender = data['gender'],
+            self.username = data['username']
+            if data['username'] is None:
+                self.username = generate_username(data['name'])
+            self.name = data['name']
+            self.email = data['email']
+            if data['email'] is None:
+                self.email = generate_email(data['name'])
+            self.phone = data['phone']
+            self.type = data['type']
+            self.birth_date = datetime.strptime(data['birth_date'], "%Y-%m-%d").date()
+            self.gender = data['gender']
             self.education = data['education']
+            self.id_number = data['id_number']
         except KeyError as e:
             raise ValidationError('Invalid order: missing ' + e.args[0])
 
@@ -207,7 +210,8 @@ class SavingGroup(db.Model):
             'cycle_url': url_for('api.get_sg_cycle', id=self.id, _external=True),
             'wallet': url_for('api.get_sg_wallet', id=self.id, _external=True),
             'shares_url': url_for('api.get_sg_current_shares', id=self.id, _external=True),
-            'fines_url': url_for('api.get_sg_current_fines', id=self.id, _external=True)
+            'fines_url': url_for('api.get_sg_current_fines', id=self.id, _external=True),
+            'organization_id': self.organization_id
         }
 
     def import_data(self, data):
