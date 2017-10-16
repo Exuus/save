@@ -31,6 +31,7 @@ class TestConfig(Config):
 
     SQLALCHEMY_DATABASE_URI = 'postgresql://postgres:129083save909@localhost/save_test'
     SQLALCHEMY_ECHO = True
+    DEBUG = True
 
 
 class ProductionConfig(Config):
