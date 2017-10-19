@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
-from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
+from itsdangerous import JSONWebSignatureSerializer as Serializer
 from flask import url_for, current_app
 from . import db
 from .exceptions import ValidationError
@@ -91,8 +91,8 @@ class User(db.Model):
     def verify_password(self, password):
         return check_password_hash(self.password_hash, password)
 
-    def generate_auth_token(self, expires_in=86400):
-        s = Serializer(current_app.config['SECRET_KEY'], expires_in=expires_in)
+    def generate_auth_token(self):
+        s = Serializer(current_app.config['SECRET_KEY'])
         return s.dumps({'id': self.id}).decode('utf-8')
 
     def get_url(self):
@@ -399,6 +399,12 @@ class MemberApprovedLoan(db.Model):
         self.status_date = datetime.utcnow()
         return self
 
+    @classmethod
+    def get_approved_loan(cls, loan_id):
+        return db.session.query(func.count(MemberApprovedLoan.id)). \
+            filter(and_(MemberApprovedLoan.loan_id == loan_id,
+                        MemberApprovedLoan.status == 1)).first()
+
 
 class MemberSocialFund(db.Model):
     __tablename__ = 'member_social_fund'
@@ -469,6 +475,12 @@ class MemberApprovedSocial(db.Model):
         self.status = 0
         self.status_date = datetime.utcnow()
         return self
+
+    @classmethod
+    def get_approved_social_fund(cls, social_debit_id):
+        return db.session.query(func.count(MemberApprovedSocial.id)).\
+            filter(and_(MemberApprovedSocial.social_debit_id == social_debit_id,
+                        MemberApprovedSocial.status == 1)).first()
 
 
 class SavingGroupFines(db.Model):
@@ -704,7 +716,14 @@ class SavingGroupMember(db.Model):
     @classmethod
     def group_admin(cls, saving_group_id):
         return SavingGroupMember.query.\
-                filter(and_(SavingGroupMember.saving_group_id == saving_group_id, SavingGroupMember.admin == 1))
+                filter(and_(SavingGroupMember.saving_group_id == saving_group_id,
+                            SavingGroupMember.admin == 1))
+
+    @classmethod
+    def count_group_admin(cls, saving_group_id):
+        return db.session.query(func.count(SavingGroupMember.id)).\
+            filter(and_(SavingGroupMember.saving_group_id == saving_group_id,
+                        SavingGroupMember.admin == 1)).first()
 
 
 class MemberMiniStatement(db.Model):
