@@ -116,7 +116,15 @@ def approve_loan(member_id, id):
                 approved_loan.approve_loan()
                 db.session.add(approved_loan)
                 db.session.commit()
-                return {}, 200
+
+                admins = SavingGroupMember.count_group_admin(member.saving_group_id)[0]
+                loan_approved = MemberApprovedLoan.get_approved_loan(approved_loan.loan_id)[0]
+
+                approval = 0
+                if admins == loan_approved:
+                    approval = 1
+
+                return {}, 200, {'Loan-Approval': approval}
         except AttributeError:
             return {}, 404
     return {}, 404
