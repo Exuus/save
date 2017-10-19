@@ -109,16 +109,25 @@ def approve_social(member_id, id):
     member = SavingGroupMember.query.\
         filter(and_(SavingGroupMember.admin == 1, SavingGroupMember.id == member_id)).\
         first()
+
     if member:
         try:
             if member.verify_pin(request.json['pin']):
+
                 approved_social = MemberApprovedSocial.query.get_or_404(id)
                 approved_social.approve_social()
                 db.session.add(approved_social)
                 db.session.commit()
-                return {}, 200
+
+                admins = SavingGroupMember.count_group_admin(member.saving_group_id)[0]
+                approve_social_fund = MemberApprovedSocial.get_approved_social_fund(approved_social.social_debit_id)[0]
+                approval = 0
+                if admins == approve_social_fund:
+                    approval = 1
+
+                return {}, 200, {'Social-Fund-Approval': approval}
         except AttributeError:
-            return {}, 404
+            return {}, 200
     return {}, 404
 
 
@@ -139,3 +148,15 @@ def decline_social(member_id, id):
         except AttributeError:
             return {}, 404
     return {}, 404
+
+
+@api.route('/members/<int:id>/admin/<int:as_id>/', methods=['GET'])
+@json
+def get_admin_member(id, as_id):
+    member = SavingGroupMember.query.get_or_404(id)
+    admins = SavingGroupMember.count_group_admin(member.saving_group_id)
+
+    return {'admin': admins[0]}
+
+
+
