@@ -60,7 +60,7 @@ def new_user(id):
     try:
         db.session.add(user)
         db.session.commit()
-        return {}, 201, {'Location': user.get_url()}
+        return user
     except IntegrityError:
         db.session.rollback()
         return internal_server_error()
