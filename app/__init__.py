@@ -7,6 +7,8 @@ from flask_cors import CORS
 from flask_mail import Mail
 from .decorators import json, no_cache, rate_limit
 from .errorhandlers import bad_request, forbidden, not_found, method_not_supported
+from raven.contrib.flask import Sentry
+
 
 # local imports
 from config import app_config
@@ -16,6 +18,8 @@ db = SQLAlchemy()
 bcrypt = Bcrypt()
 mail = Mail()
 
+sentry = Sentry(dsn='https://0a153deed31b4153b44a461665152c44:31dd524796684a248b814c4ebd0d111b@sentry.io/236088')
+
 
 def create_app(config_name):
     app = Flask(__name__)
@@ -24,6 +28,7 @@ def create_app(config_name):
     db.init_app(app)
     bcrypt.init_app(app)
     mail.init_app(app)
+    sentry.init_app(app)
     cors = CORS(app)
     migrate = Migrate(app, db)
 
