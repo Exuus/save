@@ -1,11 +1,11 @@
-from flask import request
+from flask import request, jsonify
 from . import api
 from .. import db
 from ..models import User, Organization, SavingGroupMember
 from ..decorators import json, paginate, no_cache
 from sqlalchemy.exc import IntegrityError
 from ..errorhandlers import internal_server_error
-from sqlalchemy import or_
+from ..save_sms import save_sms
 
 
 @api.route('/users/', methods=['GET'])
@@ -60,6 +60,10 @@ def new_user(id):
     try:
         db.session.add(user)
         db.session.commit()
+
+        if request.json['type'] == 3:
+            save_sms(request.json['phone'], user.confirmation_code)
+
         return user
     except IntegrityError:
         db.session.rollback()
@@ -99,4 +103,10 @@ def edit_users(id):
     db.session.add(user)
     db.session.commit()
     return {}
+
+
+@api.route('/users/sms/', methods=['POST'])
+def send_message():
+    save_sms(250785383100, 'sms text')
+    return jsonify(True)
 
