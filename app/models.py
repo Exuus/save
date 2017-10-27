@@ -684,6 +684,9 @@ class SavingGroupMember(db.Model):
     def verify_pin(self, pin):
         return check_password_hash(self.pin, pin)
 
+    def reset_pin(self):
+        self.pin = None
+
     def get_url(self):
         return url_for('api.get_sg_member', id=self.id, _external=True)
 
