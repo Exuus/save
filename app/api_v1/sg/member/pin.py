@@ -1,7 +1,7 @@
 from flask import request
 from ... import api
 from .... import db
-from ....models import SavingGroupMember, and_
+from ....models import SavingGroupMember, and_, User
 from ....decorators import json
 
 
@@ -39,4 +39,18 @@ def add_pin(id):
     member.set_pin(request.json['pin'])
     db.session.add(member)
     db.session.commit()
+    return {}, 200
+
+
+@api.route('/members/<int:id>/reset-pin/', methods=['PUT'])
+@json
+def reset_pin(id):
+    agent_id = request.json['agent_id']
+    agent_password = request.json['agent_password']
+    agent = User.query.get_or_404(agent_id)
+
+    if agent.verify_password(agent_password):
+        member = SavingGroupMember.query.get_or_404(id)
+        member.reset_pin()
+
     return {}, 200
