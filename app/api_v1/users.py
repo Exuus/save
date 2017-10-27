@@ -61,7 +61,7 @@ def new_user(id):
         db.session.add(user)
         db.session.commit()
 
-        if request.json['type'] == 3:
+        if request.json['type'] == 2:
             save_sms(request.json['phone'], user.confirmation_code)
 
         return user
