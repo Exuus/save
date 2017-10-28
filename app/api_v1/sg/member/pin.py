@@ -52,5 +52,8 @@ def reset_pin(id):
     if agent.verify_password(agent_password):
         member = SavingGroupMember.query.get_or_404(id)
         member.reset_pin()
+        db.session.add(member)
+        db.session.commit()
 
-    return {}, 200
+        return {}, 200
+    return {}, 404
