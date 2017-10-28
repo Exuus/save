@@ -853,7 +853,7 @@ class SavingGroupMeeting(db.Model):
     def import_data(self, data):
         try:
             self.theme = data['theme']
-            self.meeting_date = data['meeting_date']
+            self.meeting_date = datetime.strptime(data['meeting_date'], "%Y-%m-%d").date()
         except KeyError as e:
             raise ValidationError('Invalid SG_Meeting' + e.args[0])
         return self
