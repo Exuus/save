@@ -686,6 +686,7 @@ class SavingGroupMember(db.Model):
 
     def reset_pin(self):
         self.pin = None
+        return True
 
     def get_url(self):
         return url_for('api.get_sg_member', id=self.id, _external=True)
