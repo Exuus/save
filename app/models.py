@@ -194,6 +194,7 @@ class SavingGroup(db.Model):
     sg_cycle = db.relationship('SavingGroupCycle', backref='saving_group', lazy='dynamic')
     sg_fine = db.relationship('SavingGroupFines', backref='saving_group', lazy='dynamic')
     sg_shares = db.relationship('SavingGroupShares', backref='saving_group', lazy='dynamic')
+    sg_meeting = db.relationship('SavingGroupMeeting', backref='saving_group', lazy='dynamic')
 
     def get_url(self):
         return url_for('api.get_sg', id=self.id, _external=True)
@@ -622,6 +623,7 @@ class SavingGroupCycle(db.Model):
     member_fine = db.relationship('MemberFine', backref='sg_cycle', lazy='dynamic')
     sg_fines = db.relationship('SavingGroupFines', backref='sg_cycle', lazy='dynamic')
     sg_shares = db.relationship('SavingGroupShares', backref='sg_cycle', lazy='dynamic')
+    sg_meeting = db.relationship('SavingGroupMeeting', backref='sg_cycle', lazy='dynamic')
     db.Index('unique_cycle', start, end, saving_group_id, unique=True)
 
     def get_url(self):
@@ -675,6 +677,7 @@ class SavingGroupMember(db.Model):
     member_fine = db.relationship('MemberFine', backref='sg_member', lazy='dynamic')
     contribution = db.relationship('SgMemberContributions', backref='sg_member', lazy='dynamic')
     member_mini_statement = db.relationship('MemberMiniStatement', backref='sg_member', lazy='dynamic')
+    meeting_attendance = db.relationship('MeetingAttendance', backref='sg_member', lazy='dynamic')
 
     db.Index('member_sg_index', saving_group_id, user_id, unique=True)
 
@@ -817,11 +820,65 @@ class SavingGroupFinDetails(db.Model):
 
     def import_data(self, data):
         try:
-            self.name = data['name'],
-            self.type = data['type'],
+            self.name = data['name']
+            self.type = data['type']
             self.account = data['account']
         except KeyError as e:
             raise ValidationError('Invalid financial: missing ' + e.args[0])
+        return self
+
+
+class SavingGroupMeeting(db.Model):
+    __tablename__ = 'sg_meeting'
+    id = db.Column(db.Integer, primary_key=True)
+    theme = db.Column(db.String(64))
+    meeting_date = db.Column(db.Date)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow())
+    saving_group_id = db.Column(db.Integer, db.ForeignKey('saving_group.id'), index=True)
+    cycle_id = db.Column(db.Integer, db.ForeignKey('sg_cycle.id'), index=True)
+
+    meeting_attendance = db.relationship('MeetingAttendance', backref='sg_meeting', lazy='dynamic')
+
+    def get_url(self):
+        return url_for('api.get_meeting', id=self.id, _external=True)
+
+    def export_data(self):
+        return {
+            'self_url': self.get_url(),
+            'theme': self.theme,
+            'id': self.id,
+            'meeting_date': self.meeting_date
+        }
+
+    def import_data(self, data):
+        try:
+            self.theme = data['theme']
+            self.meeting_date = data['meeting_date']
+        except KeyError as e:
+            raise ValidationError('Invalid SG_Meeting' + e.args[0])
+        return self
+
+
+class MeetingAttendance(db.Model):
+    __tablename__ = 'meeting_attendance'
+    id = db.Column(db.Integer, primary_key=True)
+    sg_meeting_id = db.Column(db.Integer, db.ForeignKey('sg_meeting.id'), index=True)
+    member_id = db.Column(db.Integer, db.ForeignKey('sg_member.id'), index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow())
+
+    db.Index('unique_attendee', sg_meeting_id, member_id, unique=True)
+
+    def get_url(self):
+        return url_for('api.get_meeting_attendance', id=self.id, _external=True)
+
+    def export_data(self):
+        return {
+            'sg_meeting_id': self.sg_meeting_id,
+            'member_id': self.member_id,
+            'created_at': self.created_at
+        }
+
+    def import_data(self, data):
         return self
 
 
