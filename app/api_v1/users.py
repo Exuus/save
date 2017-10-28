@@ -88,7 +88,7 @@ def user_login():
 def user_confirmation_code():
     data = request.json
     user = User.query.\
-        filter(User.email == data['email'], User.confirmation_code == data['code']).\
+        filter(User.phone == data['phone'], User.confirmation_code == data['code']).\
         first()
     if user:
         return user
@@ -103,6 +103,18 @@ def edit_users(id):
     db.session.add(user)
     db.session.commit()
     return {}
+
+
+@api.route('/users/<int:id>/reset-password/', methods=['PUT'])
+@json
+def reset_user_password(id):
+    user = User.query.get_or_404(id)
+    if user.verify_password(request.json['password']):
+        user.set_password(request.json['new-password'])
+        db.session.add(user)
+        db.session.commit()
+        return {}, 200
+    return {}, 404
 
 
 @api.route('/users/sms/', methods=['POST'])
