@@ -2,7 +2,7 @@ from flask.globals import _app_ctx_stack, _request_ctx_stack
 from werkzeug.urls import url_parse
 from werkzeug.exceptions import NotFound
 from .exceptions import ValidationError
-import random
+import string, time, math, random
 
 
 def split_url(url, method='GET'):
@@ -56,4 +56,17 @@ def generate_email(names):
     number = '{:03d}'.format(random.randrange(1, 999))
     username = (first_letter + three_letters_surname + number)
     return username + "@getsave.io"
+
+
+def uniqid_email(prefix='pwd-up', more_entropy=True):
+    m = time.time()
+    uniqid = '%8x%05x' % (math.floor(m), (m - math.floor(m)) * 1000000)
+    if more_entropy:
+        valid_chars = list(set(string.hexdigits.lower()))
+        entropy_string = ''
+        for i in range(0, 50, 1):
+            entropy_string += random.choice(valid_chars)
+        uniqid = uniqid + entropy_string
+    uniqid = prefix + uniqid
+    return uniqid
 
