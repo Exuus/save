@@ -35,13 +35,29 @@ def new_sg_meetings(id):
     return {}, 200, {'Location': meeting.get_url()}
 
 
-@api.route('/meetings/<int:id>/members/', methods=['POST'])
+@api.route('/attendees/<int:id>/')
 @json
-def meeting_attendance(id):
+def get_attendee(id):
+    attendee = MeetingAttendance.query.get_or_404(id)
+    return attendee
+
+
+@api.route('/meetings/<int:id>/attendees/', methods=['GET'])
+@no_cache
+@json
+@paginate('meeting_attendees')
+def get_meeting_attendee(id):
+    meeting = SavingGroupMeeting.query.get_or_404(id)
+    return meeting.meeting_attendance
+
+
+@api.route('/meetings/<int:id>/attendees/', methods=['POST'])
+@json
+def new_meeting_attendance(id):
     meeting = SavingGroupMeeting.query.get_or_404(id)
     members = request.json
     for member in members:
-        member = SavingGroupMember.query.get_or_404(member['id'])
+        member = SavingGroupMember.query.get_or_404(member['member_id'])
         attendance = MeetingAttendance(sg_meeting=meeting, sg_member=member)
         db.session.add(attendance)
         db.session.commit()
@@ -58,13 +74,13 @@ def edit_meetings(id):
     return {}, 200
 
 
-@api.route('/meetings/<int:id>/members/', methods=['DELETE'])
+@api.route('/meetings/<int:id>/attendees/', methods=['DELETE'])
 @json
-def remove_attendance(id):
+def remove_attendees(id):
     meeting = SavingGroupMeeting.query.get_or_404(id)
     members = request.json
     for member in members:
-        member = SavingGroupMember.query.get_or_404(member['id'])
+        member = SavingGroupMember.query.get_or_404(member['member_id'])
         attendance = MeetingAttendance(sg_meeting=meeting, sg_member=member)
         db.session.delete(attendance)
         db.session.commit()
