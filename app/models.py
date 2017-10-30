@@ -132,6 +132,7 @@ class User(db.Model):
             self.gender = data['gender']
             self.education = data['education']
             self.id_number = data['id_number']
+            self.location = data['location']
         except KeyError as e:
             raise ValidationError('Invalid order: missing ' + e.args[0])
 
@@ -833,6 +834,8 @@ class SavingGroupMeeting(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     theme = db.Column(db.String(64))
     meeting_date = db.Column(db.Date)
+    bank_balance = db.Column(db.Integer)
+    external_debt = db.Column(db.Integer)
     created_at = db.Column(db.DateTime, default=datetime.utcnow())
     saving_group_id = db.Column(db.Integer, db.ForeignKey('saving_group.id'), index=True)
     cycle_id = db.Column(db.Integer, db.ForeignKey('sg_cycle.id'), index=True)
@@ -854,6 +857,8 @@ class SavingGroupMeeting(db.Model):
         try:
             self.theme = data['theme']
             self.meeting_date = datetime.strptime(data['meeting_date'], "%Y-%m-%d").date()
+            self.bank_balance = data['bank_balance']
+            self.external_debt = data['external_debt']
         except KeyError as e:
             raise ValidationError('Invalid SG_Meeting' + e.args[0])
         return self
@@ -869,7 +874,7 @@ class MeetingAttendance(db.Model):
     db.Index('unique_attendee', sg_meeting_id, member_id, unique=True)
 
     def get_url(self):
-        return url_for('api.get_meeting_attendance', id=self.id, _external=True)
+        return url_for('api.get_attendee', id=self.id, _external=True)
 
     def export_data(self):
         return {
