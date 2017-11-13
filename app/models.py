@@ -51,6 +51,7 @@ class Organization(db.Model):
     def import_data(self, data):
         try:
             self.name = data['name'],
+            self.name
             self.type = data['type'],
             self.email = data['email'],
             self.phone = data['phone'],
@@ -112,6 +113,8 @@ class User(db.Model):
             'gender': self.gender,
             'education': self.education,
             'first_login': self.first_login,
+            'id_number': self.id_number,
+            'location': self.location,
             'confirmation_code': self.confirmation_code,
             'projects_url': url_for('api.get_users_projects', id=self.id, _external=True),
             'financial_details': url_for('api.get_fin_details', id=self.id, _external=True)
@@ -208,6 +211,7 @@ class SavingGroup(db.Model):
             'creation_date': self.creation_date,
             'status': self.status,
             'location': self.village.export_data(),
+            'agent_id': self.agent_id,
             'members_url': url_for('api.get_sg_members', id=self.id, _external=True),
             'cycle_url': url_for('api.get_sg_cycle', id=self.id, _external=True),
             'wallet': url_for('api.get_sg_wallet', id=self.id, _external=True),
