@@ -3,7 +3,7 @@ from .. import api
 from ... import db
 from ...models import SavingGroup, SavingGroupMember, SavingGroupWallet, \
     Project, Organization, SavingGroupCycle, SavingGroupFinDetails, \
-    SavingGroupFines, SavingGroupShares, and_
+    SavingGroupFines, SavingGroupShares, and_, User
 from ...decorators import json, paginate, no_cache
 from sqlalchemy.exc import IntegrityError
 from ...errorhandlers import internal_server_error
@@ -188,3 +188,12 @@ def get_sg_current_shares(id):
                     SavingGroupCycle.saving_group_id == saving_group.id)).first()
 
     return SavingGroupShares.query.filter_by(sg_cycle_id=cycle.id).first()
+
+
+@api.route('/agents/<int:id>/sg/', methods=['GET'])
+@no_cache
+@json
+@paginate('saving_group')
+def get_agent_sg(id):
+    agent = User.query.get_or_404(id)
+    return agent.saving_group
