@@ -122,3 +122,21 @@ def send_message():
     save_sms(250785383100, 'sms text')
     return jsonify(True)
 
+
+@api.route('/users/<id_number>/id-number/', methods=['GET'])
+@json
+def check_user_national_id(id_number):
+    user = User.query.filter_by(id_number=id_number).first()
+    if user:
+        return {}, 200
+    return {}, 404
+
+
+@api.route('/users/<phone>/phone/', methods=['GET'])
+@json
+def check_user_phone(phone):
+    user = User.query.filter_by(phone=phone).first()
+    if user:
+        return {}, 200
+    return {}, 404
+
