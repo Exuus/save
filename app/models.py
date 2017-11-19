@@ -69,7 +69,7 @@ class User(db.Model):
     password_hash = db.Column(db.String(128))
     name = db.Column(db.String(128))
     email = db.Column(db.String(60), unique=True)
-    phone = db.Column(db.String(30), unique=True)
+    phone = db.Column(db.String(30), unique=True, index=True)
     type = db.Column(db.Integer)  # 0 Super Admin | 1 Admin | 2 Agent | 3 Member | 4 developer account
     date = db.Column(db.DateTime, default=datetime.utcnow())
     birth_date = db.Column(db.Date)
@@ -217,6 +217,7 @@ class SavingGroup(db.Model):
             'wallet': url_for('api.get_sg_wallet', id=self.id, _external=True),
             'shares_url': url_for('api.get_sg_current_shares', id=self.id, _external=True),
             'fines_url': url_for('api.get_sg_current_fines', id=self.id, _external=True),
+            'meetings_url': url_for('api.get_sg_meetings', id=self.id, _external=True),
             'organization_id': self.organization_id
         }
 
@@ -350,7 +351,8 @@ class MemberLoan(db.Model):
             'date': self.request_date,
             'interest_rate': self.interest_rate,
             'date_repayment': self.initial_date_repayment,
-            'expect_date_repayment': self.request_date + timedelta(days=self.initial_date_repayment)
+            'expect_date_repayment': self.request_date + timedelta(days=self.initial_date_repayment),
+            'sg_member_url': url_for('api.get_sg_member', id=self.sg_member_id, _external=True)
         }
 
     def import_data(self, data):
@@ -383,8 +385,9 @@ class MemberApprovedLoan(db.Model):
             'self_url': self.get_url(),
             'id': self.id,
             'status': self.status,
+            'date': self.date,
             'loan_url': url_for('api.get_loan', id=self.loan_id, _external=True),
-            'sg_member_url': url_for('api.get_sg_member', id=self.sg_member_id, _external=True)
+            'sg_admin_url': url_for('api.get_sg_member', id=self.sg_member_id, _external=True)
         }
 
     def import_data(self, data):
@@ -430,9 +433,11 @@ class MemberSocialFund(db.Model):
         return {
             'id': self.id,
             'amount': self.amount,
+            'date': self.date,
             'sg_cycle_id': self.sg_cycle_id,
             'sg_member_id': self.sg_member_id,
-            'sg_wallet_id': self.sg_wallet_id
+            'sg_wallet_id': self.sg_wallet_id,
+            'member_url': url_for('api.get_sg_member', id=self.sg_member_id, _external=True)
         }
 
     def import_data(self, data):
@@ -460,8 +465,9 @@ class MemberApprovedSocial(db.Model):
             'self_url': self.get_url(),
             'id': self.id,
             'status': self.status,
+            'date': self.date,
             'social_fund_url': url_for('api.get_social_fund', id=self.social_debit_id, _external=True),
-            'sg_member_url': url_for('api.get_sg_member', id=self.sg_member_id, _external=True)
+            'sg_admin_url': url_for('api.get_sg_member', id=self.sg_member_id, _external=True)
         }
 
     def import_data(self, data):
@@ -705,6 +711,7 @@ class SavingGroupMember(db.Model):
             'user_url': url_for('api.get_user', id=self.user_id, _external=True),
             'admin': self.admin,
             'date': self.date,
+            'user': self.users.export_data(),
             'self_url': self.get_url(),
             'sg_url': url_for('api.get_sg', id=self.saving_group_id, _external=True),
             'approved_loan_url': url_for('api.get_member_approve_loan', id=self.id, _external=True),
