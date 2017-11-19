@@ -59,7 +59,7 @@ def get_admin_pending_social(id):
         filter(and_(SavingGroupMember.admin == 1, SavingGroupMember.id == id)).\
         first()
     if member:
-        return member.approve_social
+        return member.approve_social.filter_by(status=2)
     return {}, 404
 
 
