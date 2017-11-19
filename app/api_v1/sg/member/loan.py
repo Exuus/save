@@ -59,7 +59,7 @@ def get_admin_pending_loan(id):
         filter(and_(SavingGroupMember.admin == 1, SavingGroupMember.id == id)).\
         first()
     if member:
-        return member.approved_loan
+        return member.approved_loan.filter_by(status=2)
     return {}, 404
 
 
