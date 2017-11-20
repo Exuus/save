@@ -6,7 +6,7 @@ api = Blueprint('api', __name__)
 
 
 @api.before_request
-@rate_limit(limit=15, period=15)
+@rate_limit(limit=150, period=1)
 @auth_token.login_required
 def before_request():
     """All routes in this blueprint require authentication."""
