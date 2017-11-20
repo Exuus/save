@@ -548,7 +548,7 @@ class SavingGroupFines(db.Model):
     member_fine = db.relationship('MemberFine', backref='sg_fines', lazy='dynamic')
 
     def get_url(self):
-        return url_for('api.get_sg_current_fines', id=self.id, _external=True)
+        return url_for('api.get_sg_fine', id=self.id, _external=True)
 
     def export_data(self):
         return {
@@ -557,6 +557,7 @@ class SavingGroupFines(db.Model):
             'date': self.date,
             'type': self.fine_types(self.fine_type),
             'name': self.name,
+            'acronyms': self.acronyms(self.name.split()),
             'fine': self.fine
         }
 
@@ -573,6 +574,10 @@ class SavingGroupFines(db.Model):
     def fine_types(index):
         type = ['variant', 'fixed']
         return type[index-1]
+
+    @staticmethod
+    def acronyms(words):
+        return ''.join(w[0].upper() for w in words)
 
 
 class MemberFine(db.Model):
@@ -592,12 +597,11 @@ class MemberFine(db.Model):
     def export_data(self):
         return {
             'id':self.id,
-            'status': self.status,
-            'type': self.type,
-            'amount': self.amount,
+            'status': self.get_status(self.status),
             'initialization_date': self.initialization_date,
             'payment_date': self.payment_date,
             'self_url': self.get_url(),
+            'fines': self.sg_fines.export_data(),
             'initiator_url': url_for('api.get_sg_member', id=self.initiate_by, _external=True),
             'member_url': url_for('api.get_sg_member', id=self.member_id, _external=True)
         }
@@ -613,6 +617,17 @@ class MemberFine(db.Model):
         self.status = 1
         self.payment_date = datetime.utcnow()
         return self
+
+    @staticmethod
+    def get_status(status):
+        value = ['payed','not payed']
+        return value[status]
+
+    @classmethod
+    def count_group_admin(cls, saving_group_id):
+        return db.session.query(func.count(SavingGroupMember.id)). \
+            filter(and_(SavingGroupMember.saving_group_id == saving_group_id,
+                        SavingGroupMember.admin == 1)).first()
 
 
 class SavingGroupCycle(db.Model):
