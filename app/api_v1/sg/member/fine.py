@@ -1,8 +1,8 @@
 from flask import request
 from ... import api
 from .... import db
-from ....models import SavingGroupCycle, MemberFine, \
-    SavingGroupMember, and_, SavingGroupWallet
+from ....models import MemberFine, \
+    SavingGroupMember, and_, SavingGroupWallet, SavingGroupFines
 from ....decorators import json, paginate, no_cache
 
 
@@ -21,21 +21,23 @@ def get_member_fine(id):
     return member.member_fine
 
 
-@api.route('/members/<int:id>/fines/', methods=['POST'])
+@api.route('/members/<int:id>/fines/<int:fine_id>/', methods=['POST'])
 @json
-def new_member(id):
+def new_member_fine(id, fine_id):
+
     member = SavingGroupMember.query.get_or_404(id)
+
     admin = SavingGroupMember.query.\
         filter(and_(SavingGroupMember.admin == 1,
                     SavingGroupMember.id == request.json['initiate_by'])).first()
+
+    sg_fines = SavingGroupFines.query.get_or_404(fine_id)
+
     if admin.verify_pin(request.json['pin']):
         wallet = SavingGroupWallet.query. \
             filter(SavingGroupWallet.saving_group_id == member.saving_group_id).first()
-        cycle = SavingGroupCycle.query. \
-            filter(and_(SavingGroupCycle.active == 1,
-                        SavingGroupCycle.saving_group_id == member.saving_group_id)). \
-            first()
-        member_fine = MemberFine(sg_cycle=cycle,
+
+        member_fine = MemberFine(sg_fines=sg_fines,
                                  sg_member=member,
                                  sg_wallet=wallet)
 
