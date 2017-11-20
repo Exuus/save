@@ -2,7 +2,7 @@ from flask import request
 from ... import api
 from .... import db
 from ....models import SavingGroupCycle, SavingGroupMember, and_, SavingGroupWallet, \
-    MemberLoan, MemberApprovedLoan, MemberLoanRepayment, timedelta
+    MemberLoan, MemberApprovedLoan, MemberLoanRepayment
 from ....decorators import json, paginate, no_cache
 
 
@@ -153,18 +153,26 @@ def decline_loan(member_id, id):
 @json
 def new_loan_repayment(id):
     loan = MemberLoan.query.get_or_404(id)
-    loan_payed = MemberLoanRepayment.loan_payed(loan.id)[0]
-    loan_payed = 0 if loan_payed is None else loan_payed
-    interest = loan.amount_loaned * loan.interest_rate/100
-    total_to_pay = float(interest + loan.amount_loaned)
+    balance = MemberLoan.get_loan_balance(loan)
+    payed = balance['payed_amount']
+    total = balance['total_loan_interest_plus_fine']
+    remain = balance['remain_amount']
 
-    if loan_payed < total_to_pay:
+    if float(request.json['amount']) > float(remain):
+        return {}, 404
+
+    if payed < total:
         loan_repayment = MemberLoanRepayment(member_loan=loan)
         loan_repayment.import_data(request.json)
         db.session.add(loan_repayment)
         db.session.commit()
-        return MemberLoan.get_loan_balance(loan)
-
+        balance = MemberLoan.get_loan_balance(loan)
+        if balance['status'] == 'payed':
+            # update payment date to do
+            loan.date_repayment()
+            db.session.add(loan)
+            db.session.commit()
+            return balance
     return MemberLoan.get_loan_balance(loan)
 
 
@@ -172,5 +180,8 @@ def new_loan_repayment(id):
 @json
 def get_loan_balance(id):
     loan = MemberLoan.query.get_or_404(id)
+    MemberLoan.get_loan_balance(loan)
     return MemberLoan.get_loan_balance(loan)
+
+
 
