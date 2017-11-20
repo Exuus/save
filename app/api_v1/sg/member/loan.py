@@ -2,7 +2,7 @@ from flask import request
 from ... import api
 from .... import db
 from ....models import SavingGroupCycle, SavingGroupMember, and_, SavingGroupWallet, \
-    MemberLoan, MemberApprovedLoan, MemberLoanRepayment
+    MemberLoan, MemberApprovedLoan, MemberLoanRepayment, timedelta
 from ....decorators import json, paginate, no_cache
 
 
@@ -149,45 +149,28 @@ def decline_loan(member_id, id):
     return {}, 404
 
 
-@api.route('/loan/<int:id>/repayment/', methods=['POST','GET'])
+@api.route('/loan/<int:id>/repayment/', methods=['POST'])
 @json
 def new_loan_repayment(id):
     loan = MemberLoan.query.get_or_404(id)
     loan_payed = MemberLoanRepayment.loan_payed(loan.id)[0]
     loan_payed = 0 if loan_payed is None else loan_payed
+    interest = loan.amount_loaned * loan.interest_rate/100
+    total_to_pay = float(interest + loan.amount_loaned)
 
-    if loan_payed < loan.amount_loaned:
+    if loan_payed < total_to_pay:
         loan_repayment = MemberLoanRepayment(member_loan=loan)
         loan_repayment.import_data(request.json)
         db.session.add(loan_repayment)
         db.session.commit()
-        loan_payed = MemberLoanRepayment.loan_payed(loan.id)[0]
-        remain = loan.amount_loaned - float(loan_payed)
-        return {
-            'remain_amount': remain,
-            'payed_amount': loan_payed,
-            'status': 'not payed'
-        }
+        return MemberLoan.get_loan_balance(loan)
 
-    loan_payed = MemberLoanRepayment.loan_payed(loan.id)[0]
-    remain = loan.amount_loaned - float(loan_payed)
-    return {
-        'status': 'payed',
-        'remain_amount': remain,
-        'payed_amount': loan_payed
-    }
+    return MemberLoan.get_loan_balance(loan)
 
 
 @api.route('/loan/<int:id>/balance/', methods=['GET'])
 @json
-def get_loan_balance(id):   
+def get_loan_balance(id):
     loan = MemberLoan.query.get_or_404(id)
-    loan_payed = MemberLoanRepayment.loan_payed(loan.id)[0]
-    loan_payed = 0 if loan_payed is None else loan_payed
-    remain = loan.amount_loaned - float(loan_payed)
-    return {
-        'status': 'payed',
-        'remain_amount': remain,
-        'payed_amount': loan_payed
-    }
+    return MemberLoan.get_loan_balance(loan)
 
