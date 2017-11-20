@@ -386,6 +386,7 @@ class MemberLoan(db.Model):
             'loan_interest': interest,
             'interest_rate': loan.interest_rate,
             'date_payment': loan.date_payment,
+            'request_date': loan.request_date,
             'initial_loan_plus_interest': initial_loan_interest,
             'total_loan_interest_plus_fine': total_to_pay,
             'fine': loan.calculate_fine()
