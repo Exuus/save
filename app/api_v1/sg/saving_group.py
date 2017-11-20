@@ -136,6 +136,12 @@ def edit_fines(id):
     return {}, 200
 
 
+@api.route('/sg/fines/<int:id>/', methods=['GET'])
+@json
+def get_sg_fine(id):
+    return SavingGroupFines.query.get_or_404(id)
+
+
 @api.route('/sg/<int:id>/fines/', methods=['GET'])
 @no_cache
 @json
