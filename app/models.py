@@ -539,14 +539,13 @@ class SavingGroupFines(db.Model):
     __tablename__ = 'sg_fines'
     id = db.Column(db.Integer, primary_key=True)
     date = db.Column(db.DateTime, default=datetime.utcnow())
-    social_fund = db.Column(db.Integer)
-    attendance = db.Column(db.Integer)
-    loan = db.Column(db.Integer)
-    saving = db.Column(db.Integer)
-    meeting = db.Column(db.Integer)
+    fine_type = db.Column(db.Integer)  # 1 variant  | 2 fixed
+    name = db.Column(db.String(40))
+    fine = db.Column(db.Integer)
     saving_group_id = db.Column(db.Integer, db.ForeignKey('saving_group.id'), index=True)
     sg_cycle_id = db.Column(db.Integer, db.ForeignKey('sg_cycle.id'), index=True)
-    db.Index('unique_fine', saving_group_id, sg_cycle_id, unique=True)
+    db.Index('unique_fine', saving_group_id, sg_cycle_id, name, unique=True)
+    member_fine = db.relationship('MemberFine', backref='sg_fines', lazy='dynamic')
 
     def get_url(self):
         return url_for('api.get_sg_current_fines', id=self.id, _external=True)
@@ -556,38 +555,36 @@ class SavingGroupFines(db.Model):
             'self_url': self.get_url(),
             'id': self.id,
             'date': self.date,
-            'social_fund_fine': self.social_fund,
-            'attendance_fine': self.attendance,
-            'loan_fine': self.loan,
-            'saving_fine': self.saving,
-            'meeting_absence': self.meeting
+            'type': self.fine_types(self.fine_type),
+            'name': self.name,
+            'fine': self.fine
         }
 
     def import_data(self, data):
         try:
-            self.social_fund = data['social_fund_fine']
-            self.attendance = data['attendance_fine']
-            self.loan = data['loan_fine']
-            self.saving = data['saving_fine']
-            self.meeting = data['meeting_absence']
+            self.fine_type = data['type']
+            self.name = data['name']
+            self.fine = data['fine']
         except KeyError as e:
             ValidationError('Invalid SavingGroupFines ' + e.args[0])
         return self
+
+    @staticmethod
+    def fine_types(index):
+        type = ['variant', 'fixed']
+        return type[index-1]
 
 
 class MemberFine(db.Model):
     __tablename__ = 'member_fine'
     id = db.Column(db.Integer, primary_key=True)
     status = db.Column(db.Integer, default=0)  # 1 Payed | 0 Not payed
-    type = db.Column(db.String(20))  # 1 social_fund_fine | 2 loan_fine |
-    # 3 meeting_absence | 4 saving_fine | attendance_fine
-    amount = db.Column(db.Integer)
     initialization_date = db.Column(db.DateTime, default=datetime.utcnow())
     payment_date = db.Column(db.DateTime, nullable=True)
     initiate_by = db.Column(db.Integer, index=True)  # admin member
     member_id = db.Column(db.Integer, db.ForeignKey('sg_member.id'), index=True)
     wallet_id = db.Column(db.Integer, db.ForeignKey('sg_wallet.id'), index=True)
-    cycle_id = db.Column(db.Integer, db.ForeignKey('sg_cycle.id'), index=True)
+    sg_fine_id = db.Column(db.Integer, db.ForeignKey('sg_fines.id'), index=True)
 
     def get_url(self):
         return url_for('api.get_fine', id=self.id, _external=True)
@@ -607,8 +604,6 @@ class MemberFine(db.Model):
 
     def import_data(self, data):
         try:
-            self.type = data['type']
-            self.amount = data['amount']
             self.initiate_by = data['initiate_by']
         except KeyError as e:
             ValidationError('Invalid Member Fine ' + e.args[0])
@@ -631,7 +626,6 @@ class SavingGroupCycle(db.Model):
     contributions = db.relationship('SgMemberContributions', backref='sg_cycle', lazy='dynamic')
     member_loan = db.relationship('MemberLoan', backref='sg_cycle', lazy='dynamic')
     member_social = db.relationship('MemberSocialFund', backref='sg_cycle', lazy='dynamic')
-    member_fine = db.relationship('MemberFine', backref='sg_cycle', lazy='dynamic')
     sg_fines = db.relationship('SavingGroupFines', backref='sg_cycle', lazy='dynamic')
     sg_shares = db.relationship('SavingGroupShares', backref='sg_cycle', lazy='dynamic')
     sg_meeting = db.relationship('SavingGroupMeeting', backref='sg_cycle', lazy='dynamic')
