@@ -495,46 +495,6 @@ class MemberApprovedSocial(db.Model):
                         MemberApprovedSocial.status == 1)).first()
 
 
-class SavingGroupFines(db.Model):
-    __tablename__ = 'sg_fines'
-    id = db.Column(db.Integer, primary_key=True)
-    date = db.Column(db.DateTime, default=datetime.utcnow())
-    social_fund = db.Column(db.Integer)
-    attendance = db.Column(db.Integer)
-    loan = db.Column(db.Integer)
-    saving = db.Column(db.Integer)
-    meeting = db.Column(db.Integer)
-    saving_group_id = db.Column(db.Integer, db.ForeignKey('saving_group.id'), index=True)
-    sg_cycle_id = db.Column(db.Integer, db.ForeignKey('sg_cycle.id'), index=True)
-    db.Index('unique_fine', saving_group_id, sg_cycle_id, unique=True)
-
-    def get_url(self):
-        return url_for('api.get_sg_current_fines', id=self.id, _external=True)
-
-    def export_data(self):
-        return {
-            'self_url': self.get_url(),
-            'id': self.id,
-            'date': self.date,
-            'social_fund_fine': self.social_fund,
-            'attendance_fine': self.attendance,
-            'loan_fine': self.loan,
-            'saving_fine': self.saving,
-            'meeting_absence': self.meeting
-        }
-
-    def import_data(self, data):
-        try:
-            self.social_fund = data['social_fund_fine']
-            self.attendance = data['attendance_fine']
-            self.loan = data['loan_fine']
-            self.saving = data['saving_fine']
-            self.meeting = data['meeting_absence']
-        except KeyError as e:
-            ValidationError('Invalid SavingGroupFines ' + e.args[0])
-        return self
-
-
 class SavingGroupShares(db.Model):
     __tablename__ = 'saving_group_shares'
     id = db.Column(db.Integer, primary_key=True)
@@ -575,6 +535,46 @@ class SavingGroupShares(db.Model):
         return round(float(savings/self.share), 1)
 
 
+class SavingGroupFines(db.Model):
+    __tablename__ = 'sg_fines'
+    id = db.Column(db.Integer, primary_key=True)
+    date = db.Column(db.DateTime, default=datetime.utcnow())
+    social_fund = db.Column(db.Integer)
+    attendance = db.Column(db.Integer)
+    loan = db.Column(db.Integer)
+    saving = db.Column(db.Integer)
+    meeting = db.Column(db.Integer)
+    saving_group_id = db.Column(db.Integer, db.ForeignKey('saving_group.id'), index=True)
+    sg_cycle_id = db.Column(db.Integer, db.ForeignKey('sg_cycle.id'), index=True)
+    db.Index('unique_fine', saving_group_id, sg_cycle_id, unique=True)
+
+    def get_url(self):
+        return url_for('api.get_sg_current_fines', id=self.id, _external=True)
+
+    def export_data(self):
+        return {
+            'self_url': self.get_url(),
+            'id': self.id,
+            'date': self.date,
+            'social_fund_fine': self.social_fund,
+            'attendance_fine': self.attendance,
+            'loan_fine': self.loan,
+            'saving_fine': self.saving,
+            'meeting_absence': self.meeting
+        }
+
+    def import_data(self, data):
+        try:
+            self.social_fund = data['social_fund_fine']
+            self.attendance = data['attendance_fine']
+            self.loan = data['loan_fine']
+            self.saving = data['saving_fine']
+            self.meeting = data['meeting_absence']
+        except KeyError as e:
+            ValidationError('Invalid SavingGroupFines ' + e.args[0])
+        return self
+
+
 class MemberFine(db.Model):
     __tablename__ = 'member_fine'
     id = db.Column(db.Integer, primary_key=True)
@@ -584,7 +584,7 @@ class MemberFine(db.Model):
     amount = db.Column(db.Integer)
     initialization_date = db.Column(db.DateTime, default=datetime.utcnow())
     payment_date = db.Column(db.DateTime, nullable=True)
-    initiate_by = db.Column(db.Integer)  # admin member
+    initiate_by = db.Column(db.Integer, index=True)  # admin member
     member_id = db.Column(db.Integer, db.ForeignKey('sg_member.id'), index=True)
     wallet_id = db.Column(db.Integer, db.ForeignKey('sg_wallet.id'), index=True)
     cycle_id = db.Column(db.Integer, db.ForeignKey('sg_cycle.id'), index=True)
