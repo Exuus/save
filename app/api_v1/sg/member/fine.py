@@ -1,7 +1,7 @@
 from flask import request
 from ... import api
 from .... import db
-from ....models import MemberFine, \
+from ....models import SavingGroupCycle, MemberFine, \
     SavingGroupMember, and_, SavingGroupWallet, SavingGroupFines
 from ....decorators import json, paginate, no_cache
 
@@ -13,12 +13,15 @@ def get_fine(id):
 
 
 @api.route('/members/<int:id>/fines/', methods=['GET'])
-@no_cache
 @json
-@paginate('fines')
 def get_member_fine(id):
     member = SavingGroupMember.query.get_or_404(id)
-    return member.member_fine
+    cycle = SavingGroupCycle.current_cycle(member.saving_group_id)
+    #return member.member_fine.join(SavingGroupFines)\
+        #.filter(SavingGroupFines.id == MemberFine.sg_fine_id)\
+        #.filter(SavingGroupFines.sg_cycle_id == cycle.id)
+
+    return MemberFine.fixed_fine(member.id, cycle.id)
 
 
 @api.route('/members/<int:id>/fines/<int:fine_id>/', methods=['POST'])
