@@ -352,6 +352,7 @@ class MemberLoan(db.Model):
             'date': self.request_date,
             'interest_rate': self.interest_rate,
             'date_repayment': self.initial_date_repayment,
+            'request_date': self.request_date,
             'expect_date_repayment': self.request_date + timedelta(days=self.initial_date_repayment),
             'sg_member_url': url_for('api.get_sg_member', id=self.sg_member_id, _external=True)
         }
@@ -365,24 +366,48 @@ class MemberLoan(db.Model):
             raise ValidationError('Invalid sg_debit_loan' + e.args[0])
         return self
 
-    def date_rep(self):
-        pass
+    def date_repayment(self):
+        self.date_payment = datetime.utcnow()
 
     @classmethod
     def get_loan_balance(cls, loan):
         loan_payed = MemberLoanRepayment.loan_payed(loan.id)[0]
+        fine = loan.calculate_fine()
         loan_payed = 0 if loan_payed is None else loan_payed
         interest = loan.amount_loaned * loan.interest_rate / 100
-        total_to_pay = float(interest + loan.amount_loaned)
+        initial_loan_interest = float(interest + loan.amount_loaned)
+        total_to_pay = float(interest + loan.amount_loaned + fine['amount'])
         remain = total_to_pay - float(loan_payed)
         return {
-            'status': 'payed',
+            'status': 'payed' if remain == 0 else 'not payed',
             'remain_amount': remain,
             'payed_amount': loan_payed,
             'initial_loan': loan.amount_loaned,
-            'interest': interest,
+            'loan_interest': interest,
             'interest_rate': loan.interest_rate,
-            'total_to_pay': total_to_pay
+            'date_payment': loan.date_payment,
+            'initial_loan_plus_interest': initial_loan_interest,
+            'total_loan_interest_plus_fine': total_to_pay,
+            'fine': loan.calculate_fine()
+        }
+
+    def calculate_fine(self):
+        repayment_date = self.request_date + timedelta(days=self.initial_date_repayment)
+        interest = self.amount_loaned * self.interest_rate / 100
+        fine_rate = interest/self.initial_date_repayment
+
+        if (datetime.now() > repayment_date) & (self.date_payment is None):
+            days = (datetime.now() - repayment_date).days
+            fine = days * fine_rate
+            return {
+                'amount': fine,
+                'delays': days
+            }
+        days = (self.date_payment - repayment_date).days
+        fine = days * fine_rate
+        return {
+            'amount': fine,
+            'delays': days
         }
 
 
