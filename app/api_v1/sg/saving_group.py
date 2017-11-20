@@ -66,10 +66,11 @@ def new_saving_group(id):
         db.session.commit()
 
     """ SG Fines """
-    sg_fines = SavingGroupFines(saving_group=saving_group, sg_cycle=cycle)
-    sg_fines.import_data(request.json['fines'])
-    db.session.add(sg_fines)
-    db.session.commit()
+    for fine in request.json['fines']:
+        sg_fines = SavingGroupFines(saving_group=saving_group, sg_cycle=cycle)
+        sg_fines.import_data(fine)
+        db.session.add(sg_fines)
+        db.session.commit()
 
     """ SG Shares """
     sg_shares = SavingGroupShares(saving_group=saving_group, sg_cycle=cycle)
@@ -114,20 +115,15 @@ def new_sg_member(id):
 
 @api.route('/sg/<int:id>/fines/', methods=['POST'])
 @json
-def new_sg_fines(id):
+def new_fines(id):
     saving_group = SavingGroup.query.get_or_404(id)
-    cycle = SavingGroupCycle.query.\
-        filter(and_(SavingGroupCycle.active == 1,
-                    SavingGroupCycle.saving_group_id == saving_group.id)).first()
-
-    sg_fines = SavingGroupFines(saving_group=saving_group, sg_cycle=cycle)
-    sg_fines.import_data(request.json)
-    try:
+    sg_cycle = SavingGroupCycle.current_cycle(id)
+    for fine in request.json['fines']:
+        sg_fines = SavingGroupFines(saving_group=saving_group, sg_cycle=sg_cycle)
+        sg_fines.import_data(fine)
         db.session.add(sg_fines)
-        db.session.commit()
-        return {}, 200, {'Location': sg_fines.get_url()}
-    except IntegrityError:
-        return internal_server_error()
+    db.session.commit()
+    return {}, 200
 
 
 @api.route('/fines/<int:id>/', methods=['PUT'])
@@ -141,14 +137,15 @@ def edit_fines(id):
 
 
 @api.route('/sg/<int:id>/fines/', methods=['GET'])
+@no_cache
 @json
+@paginate('sg_fines')
 def get_sg_current_fines(id):
     saving_group = SavingGroup.query.get_or_404(id)
-    cycle = SavingGroupCycle.query. \
-        filter(and_(SavingGroupCycle.active == 1,
-                    SavingGroupCycle.saving_group_id == saving_group.id)).first()
+    cycle = SavingGroupCycle.current_cycle(id)
 
-    return SavingGroupFines.query.filter_by(sg_cycle_id=cycle.id).first()
+    return saving_group.sg_fine\
+        .filter(SavingGroupFines.sg_cycle_id == cycle.id)
 
 
 @api.route('/sg/<int:id>/shares/', methods=['POST'])
@@ -197,3 +194,5 @@ def get_sg_current_shares(id):
 def get_agent_sg(id):
     agent = User.query.get_or_404(id)
     return agent.saving_group
+
+
