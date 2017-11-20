@@ -368,6 +368,23 @@ class MemberLoan(db.Model):
     def date_rep(self):
         pass
 
+    @classmethod
+    def get_loan_balance(cls, loan):
+        loan_payed = MemberLoanRepayment.loan_payed(loan.id)[0]
+        loan_payed = 0 if loan_payed is None else loan_payed
+        interest = loan.amount_loaned * loan.interest_rate / 100
+        total_to_pay = float(interest + loan.amount_loaned)
+        remain = total_to_pay - float(loan_payed)
+        return {
+            'status': 'payed',
+            'remain_amount': remain,
+            'payed_amount': loan_payed,
+            'initial_loan': loan.amount_loaned,
+            'interest': interest,
+            'interest_rate': loan.interest_rate,
+            'total_to_pay': total_to_pay
+        }
+
 
 class MemberLoanRepayment(db.Model):
     __table_name__ = 'member_loan_repayment'
