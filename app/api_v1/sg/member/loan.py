@@ -34,13 +34,22 @@ def get_member_pending_loan(id):
 @paginate('member_loan')
 def get_member_approve_loan(id):
     member = SavingGroupMember.query.get_or_404(id)
+    cycle = SavingGroupCycle.current_cycle(member.saving_group_id)
     if member:
         return MemberLoan.query\
+            .join(MemberApprovedLoan, SavingGroupCycle)\
             .filter(MemberLoan.sg_member_id == member.id)\
-            .join(SavingGroupCycle)\
-            .filter(SavingGroupCycle.saving_group_id == member.saving_group_id)\
-            .join(MemberApprovedLoan)\
+            .filter(MemberLoan.id == MemberApprovedLoan.loan_id)\
+            .filter(MemberLoan.sg_cycle_id == SavingGroupCycle.id)\
+            .filter(SavingGroupCycle.id == cycle.id)\
             .filter(MemberApprovedLoan.status == 1)
+        # return MemberLoan.query\
+        #     .filter(MemberLoan.sg_member_id == member.id)\
+        #     .join(SavingGroupCycle)\
+        #     .filter(SavingGroupCycle.saving_group_id == member.saving_group_id)\
+        #     .join(MemberApprovedLoan)\
+        #     .filter(MemberApprovedLoan.status == 1)\
+        #     .filter(MemberLoan.id == MemberApprovedLoan.loan_id)
     return {}, 404,
 
 
