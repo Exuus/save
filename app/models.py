@@ -389,7 +389,8 @@ class MemberLoan(db.Model):
             'request_date': loan.request_date,
             'initial_loan_plus_interest': initial_loan_interest,
             'total_loan_interest_plus_fine': total_to_pay,
-            'fine': loan.calculate_fine()
+            'fine': loan.calculate_fine(),
+            'expect_date_repayment': loan.request_date + timedelta(days=loan.initial_date_repayment)
         }
 
     def calculate_fine(self):
@@ -404,12 +405,24 @@ class MemberLoan(db.Model):
                 'amount': fine,
                 'delays': days
             }
-        days = (self.date_payment - repayment_date).days
-        fine = days * fine_rate
-        return {
-            'amount': fine,
-            'delays': days
-        }
+        elif (datetime.now() <= repayment_date) & (self.date_payment is None):
+            return {
+                'amount': 0,
+                'delays': 0
+            }
+        elif (self.date_payment is not None) & (datetime.now() <= repayment_date):
+
+            return {
+                'amount': 0,
+                'delays': 0
+            }
+        else:
+            days = (self.date_payment - repayment_date).days
+            fine = days * fine_rate
+            return {
+                'amount': fine,
+                'delays': days
+            }
 
 
 class MemberLoanRepayment(db.Model):
@@ -633,7 +646,7 @@ class SavingGroupFines(db.Model):
             'self_url': self.get_url(),
             'id': self.id,
             'date': self.date,
-            'type': self.fine_types(self.fine_type),
+            'type': self.fine_type,
             'name': self.name,
             'acronyms': self.acronym,
             'fine': self.fine
@@ -651,8 +664,8 @@ class SavingGroupFines(db.Model):
 
     @staticmethod
     def fine_types(index):
-        type = ['variant', 'fixed']
-        return type[index-1]
+        type_ = ['variant', 'fixed']
+        return type_[index-1]
 
     @staticmethod
     def acronyms(words):
