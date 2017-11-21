@@ -17,10 +17,6 @@ def get_fine(id):
 def get_member_fine(id):
     member = SavingGroupMember.query.get_or_404(id)
     cycle = SavingGroupCycle.current_cycle(member.saving_group_id)
-    #return member.member_fine.join(SavingGroupFines)\
-        #.filter(SavingGroupFines.id == MemberFine.sg_fine_id)\
-        #.filter(SavingGroupFines.sg_cycle_id == cycle.id)
-
     return MemberFine.fixed_fine(member.id, cycle.id)
 
 
