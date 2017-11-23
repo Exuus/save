@@ -83,10 +83,8 @@ def new_loan_request(id):
             if member.verify_pin(request.json['pin']):
                 wallet = SavingGroupWallet.query. \
                     filter(SavingGroupWallet.saving_group_id == member.saving_group_id).first()
-                cycle = SavingGroupCycle.query. \
-                    filter(and_(SavingGroupCycle.active == 1,
-                                SavingGroupCycle.saving_group_id == member.saving_group_id)). \
-                    first()
+                cycle = SavingGroupCycle.current_cycle(member.saving_group_id)
+
                 loan = MemberLoan(
                     sg_cycle=cycle,
                     sg_wallet=wallet,
