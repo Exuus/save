@@ -416,13 +416,17 @@ class MemberLoan(db.Model):
                 'amount': 0,
                 'delays': 0
             }
-        else:
-            days = (self.date_payment - repayment_date).days
-            fine = days * fine_rate
-            return {
-                'amount': fine,
-                'delays': days
-            }
+
+        days = (self.date_payment - repayment_date).days
+        fine = days * fine_rate
+        return {
+            'amount': fine,
+            'delays': days
+        }
+
+    @classmethod
+    def loan_status(cls, loan_id, saving_group_id, status):
+        admins = SavingGroupMember.group_admin(saving_group_id)
 
 
 class MemberLoanRepayment(db.Model):
