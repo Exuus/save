@@ -198,6 +198,20 @@ def new_loan_repayment(id):
     return MemberLoan.get_loan_balance(loan)
 
 
+@api.route('/members/<int:id>/write-off/', methods=['PUT'])
+@json
+def update_write_off(id):
+    admin = SavingGroupMember.query.get_or_404(request.json['admin_id'])
+    if admin.verify_pin(request.json['pin']):
+        member = SavingGroupMember.query.get_or_404(id)
+        loan = MemberLoan.query.filter_by(sg_member_id=member.id).first()
+        loan.write_off()
+        db.session.add(loan)
+        db.session.commit()
+        return {}, 200
+    return {}, 404
+
+
 @api.route('/loan/<int:id>/balance/', methods=['GET'])
 @json
 def get_loan_balance(id):
