@@ -186,6 +186,7 @@ class SavingGroup(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), unique=True)
     creation_date = db.Column(db.Date)
+    date = db.Column(db.DateTime, default=datetime.utcnow())
     status = db.Column(db.Integer)  # 1 Graduated | 0 Supervised
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), index=True)
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'), index=True)
@@ -425,8 +426,13 @@ class MemberLoan(db.Model):
         }
 
     @classmethod
-    def loan_status(cls, loan_id, saving_group_id, status):
-        admins = SavingGroupMember.group_admin(saving_group_id)
+    def loan_status(cls, loan_id, saving_group_id):
+        admins = SavingGroupMember.count_group_admin(saving_group_id)[0]
+        loan_approved = MemberApprovedLoan.get_approved_loan(loan_id)[0]
+
+        if admins == loan_approved:
+            return True
+        return False
 
 
 class MemberLoanRepayment(db.Model):
