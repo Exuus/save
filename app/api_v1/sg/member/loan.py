@@ -76,7 +76,10 @@ def get_admin_pending_loan(id):
 @json
 def get_member_loan(id):
     member = SavingGroupMember.query.get_or_404(id)
-    loan = MemberLoan.query.filter_by(sg_member_id=member.id).first()
+    loan = MemberLoan.query\
+        .filter_by(sg_member_id=member.id)\
+        .order_by(MemberLoan.date_payment.desc())\
+        .first()
     status = MemberLoan.loan_status(loan.id, member.saving_group_id)
     loan = MemberLoan.get_loan_balance(loan)
     if not status:
@@ -90,7 +93,10 @@ def get_member_loan(id):
 def new_loan_request(id):
     member = SavingGroupMember.query.get_or_404(id)
     admins = SavingGroupMember.group_admin(member.saving_group_id)
-    loan = MemberLoan.query.filter_by(sg_member_id=member.id).first()
+    loan = MemberLoan.query\
+        .filter_by(sg_member_id=member.id)\
+        .order_by(MemberLoan.date_payment.desc())\
+        .first()
     loan = MemberLoan.get_loan_balance(loan)
     if loan['status'] == 'payed':
         if member:
