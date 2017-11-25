@@ -72,40 +72,55 @@ def get_admin_pending_loan(id):
     return {}, 404
 
 
+@api.route('/members/<int:id>/loan/', methods=['GET'])
+@json
+def get_member_loan(id):
+    member = SavingGroupMember.query.get_or_404(id)
+    loan = MemberLoan.query.filter_by(sg_member_id=member.id).first()
+    status = MemberLoan.loan_status(loan.id, member.saving_group_id)
+    loan = MemberLoan.get_loan_balance(loan)
+    if not status:
+        loan['status'] = 'pending'
+        return loan
+    return loan
+
+
 @api.route('/member/<int:id>/loan/', methods=['POST'])
 @json
 def new_loan_request(id):
     member = SavingGroupMember.query.get_or_404(id)
     admins = SavingGroupMember.group_admin(member.saving_group_id)
+    loan = MemberLoan.query.filter_by(sg_member_id=member.id).first()
+    loan = MemberLoan.get_loan_balance(loan)
+    if loan['status'] == 'payed':
+        if member:
+            if len(admins.all()):
+                if member.verify_pin(request.json['pin']):
+                    wallet = SavingGroupWallet.query. \
+                        filter(SavingGroupWallet.saving_group_id == member.saving_group_id).first()
+                    cycle = SavingGroupCycle.current_cycle(member.saving_group_id)
 
-    if member:
-        if len(admins.all()):
-            if member.verify_pin(request.json['pin']):
-                wallet = SavingGroupWallet.query. \
-                    filter(SavingGroupWallet.saving_group_id == member.saving_group_id).first()
-                cycle = SavingGroupCycle.current_cycle(member.saving_group_id)
+                    loan = MemberLoan(
+                        sg_cycle=cycle,
+                        sg_wallet=wallet,
+                        sg_member=member
+                    )
 
-                loan = MemberLoan(
-                    sg_cycle=cycle,
-                    sg_wallet=wallet,
-                    sg_member=member
-                )
-
-                loan.import_data(request.json)
-                db.session.add(loan)
-                db.session.commit()
-
-                """ add member approve Request """
-
-                for admin in admins:
-                    data = dict()
-                    data['status'] = 2
-                    data['sg_member_id'] = admin.export_data()['id']
-                    approved_loan = MemberApprovedLoan(member_loan=loan)
-                    approved_loan.import_data(data)
-                    db.session.add(approved_loan)
+                    loan.import_data(request.json)
+                    db.session.add(loan)
                     db.session.commit()
-                return {}, 201, {'Location': loan.get_url()}
+
+                    """ add member approve Request """
+
+                    for admin in admins:
+                        data = dict()
+                        data['status'] = 2
+                        data['sg_member_id'] = admin.export_data()['id']
+                        approved_loan = MemberApprovedLoan(member_loan=loan)
+                        approved_loan.import_data(data)
+                        db.session.add(approved_loan)
+                        db.session.commit()
+                    return {}, 201, {'Location': loan.get_url()}
 
     return {}, 404
 
