@@ -391,6 +391,7 @@ class MemberLoan(db.Model):
             'payed_amount': loan_payed,
             'initial_loan': loan.amount_loaned,
             'loan_interest': interest,
+            'id': loan.id,
             'interest_rate': loan.interest_rate,
             'date_payment': loan.date_payment,
             'request_date': loan.request_date,
