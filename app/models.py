@@ -4,7 +4,7 @@ from itsdangerous import JSONWebSignatureSerializer as Serializer
 from flask import url_for, current_app
 from . import db
 from .exceptions import ValidationError
-from .utils import generate_code, generate_username, generate_email
+from .utils import generate_code, generate_username, generate_email, monthdelta
 from sqlalchemy import and_, func
 import arrow
 
@@ -336,6 +336,7 @@ class MemberLoan(db.Model):
     interest_rate = db.Column(db.Integer)
     initial_date_repayment = db.Column(db.Integer)
     date_payment = db.Column(db.DateTime)
+    payment_type = db.Column(db.Integer)  # 0 Write-off | 1 Self-payed
     sg_cycle_id = db.Column(db.Integer, db.ForeignKey('sg_cycle.id'), index=True)
     sg_member_id = db.Column(db.Integer, db.ForeignKey('sg_member.id'), index=True)
     sg_wallet_id = db.Column(db.Integer, db.ForeignKey('sg_wallet.id'), index=True)
@@ -369,6 +370,11 @@ class MemberLoan(db.Model):
 
     def date_repayment(self):
         self.date_payment = datetime.utcnow()
+        self.payment_type = 1
+
+    def write_off(self):
+        self.date_payment = datetime.utcnow()
+        self.payment_type = 0
 
     @classmethod
     def get_loan_balance(cls, loan):
@@ -380,7 +386,7 @@ class MemberLoan(db.Model):
         total_to_pay = float(interest + loan.amount_loaned + fine['amount'])
         remain = total_to_pay - float(loan_payed)
         return {
-            'status': 'payed' if remain == 0 else 'not payed',
+            'status': loan.get_payment_status(remain),
             'remain_amount': remain,
             'payed_amount': loan_payed,
             'initial_loan': loan.amount_loaned,
@@ -393,6 +399,13 @@ class MemberLoan(db.Model):
             'fine': loan.calculate_fine(),
             'expect_date_repayment': loan.request_date + timedelta(days=loan.initial_date_repayment)
         }
+
+    def get_payment_status(self, remain):
+        if self.payment_type == 0:
+            return 'payed'
+        elif remain == 0:
+            return 'payed'
+        return 'not payed'
 
     def calculate_fine(self):
         repayment_date = self.request_date + timedelta(days=self.initial_date_repayment)
@@ -763,6 +776,7 @@ class SavingGroupCycle(db.Model):
             'start': self.start,
             'end': self.end,
             'active': self.active,
+            'cycle_length': monthdelta(self.start, self.end),
             'self_url': self.get_url(),
             'sg_url': url_for('api.get_sg', id=self.saving_group_id, _external=True),
             'loan_url': url_for('api.get_cycle_loan', id=self.id, _external=True),
