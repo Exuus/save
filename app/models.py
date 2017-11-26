@@ -337,6 +337,7 @@ class MemberLoan(db.Model):
     initial_date_repayment = db.Column(db.Integer)
     date_payment = db.Column(db.DateTime)
     payment_type = db.Column(db.Integer)  # 0 Write-off | 1 Self-payed
+    write_off_admin = db.Column(db.Integer)
     sg_cycle_id = db.Column(db.Integer, db.ForeignKey('sg_cycle.id'), index=True)
     sg_member_id = db.Column(db.Integer, db.ForeignKey('sg_member.id'), index=True)
     sg_wallet_id = db.Column(db.Integer, db.ForeignKey('sg_wallet.id'), index=True)
@@ -372,9 +373,10 @@ class MemberLoan(db.Model):
         self.date_payment = datetime.utcnow()
         self.payment_type = 1
 
-    def write_off(self):
+    def write_off(self, admin_id):
         self.date_payment = datetime.utcnow()
         self.payment_type = 0
+        self.write_off_admin = admin_id
 
     @classmethod
     def get_loan_balance(cls, loan):
@@ -394,6 +396,7 @@ class MemberLoan(db.Model):
             'id': loan.id,
             'interest_rate': loan.interest_rate,
             'date_payment': loan.date_payment,
+            'payment_type': loan.write_of_or_self_payed(),
             'request_date': loan.request_date,
             'initial_loan_plus_interest': initial_loan_interest,
             'total_loan_interest_plus_fine': total_to_pay,
@@ -407,6 +410,11 @@ class MemberLoan(db.Model):
         elif remain == 0:
             return 'payed'
         return 'not payed'
+
+    def write_of_or_self_payed(self):
+        if self.payment_type == 0:
+            return 'write-off'
+        return 'self-payed'
 
     def calculate_fine(self):
         repayment_date = self.request_date + timedelta(days=self.initial_date_repayment)
