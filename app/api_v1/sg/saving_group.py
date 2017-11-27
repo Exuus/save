@@ -71,6 +71,7 @@ def new_saving_group(id):
         sg_fines.import_data(fine)
         db.session.add(sg_fines)
         db.session.commit()
+        db.session.commit()
 
     """ SG Shares """
     sg_shares = SavingGroupShares(saving_group=saving_group, sg_cycle=cycle)
@@ -96,14 +97,16 @@ def get_organizations_sg(id):
 @paginate('members')
 def get_sg_members(id):
     saving_group = SavingGroup.query.get_or_404(id)
-    return saving_group.sg_member
+    return saving_group.sg_member.filter_by(activate=1)
 
 
 @api.route('/sg/<int:id>/members/', methods=['POST'])
 @json
 def new_sg_member(id):
     saving_group = SavingGroup.query.get_or_404(id)
-    member = SavingGroupMember(saving_group=saving_group)
+    cycle = SavingGroupCycle.current_cycle(id)
+    member = SavingGroupMember(saving_group=saving_group,
+                               sg_cycle=cycle)
     member.import_data(request.json)
     try:
         db.session.add(member)
