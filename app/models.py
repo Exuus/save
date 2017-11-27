@@ -774,6 +774,7 @@ class SavingGroupCycle(db.Model):
     sg_fines = db.relationship('SavingGroupFines', backref='sg_cycle', lazy='dynamic')
     sg_shares = db.relationship('SavingGroupShares', backref='sg_cycle', lazy='dynamic')
     sg_meeting = db.relationship('SavingGroupMeeting', backref='sg_cycle', lazy='dynamic')
+    sg_member = db.relationship('SavingGroupMember', backref='sg_cycle', lazy='dynamic')
     db.Index('unique_cycle', start, end, saving_group_id, unique=True)
 
     def get_url(self):
@@ -819,8 +820,9 @@ class SavingGroupMember(db.Model):
     pin = db.Column(db.String(128), index=True)
     date = db.Column(db.DateTime, default=datetime.utcnow())
     admin = db.Column(db.Integer)  # 1 Admin # 0 Normal Member
+    activate = db.Column(db.Integer, default=1)  # 1 Activate | 0 Removed
+    sg_cycle_id = db.Column(db.Integer, db.ForeignKey('sg_cycle.id'), index=True)
 
-    drop_out = db.relationship('SavingGroupDropOut', backref='sg_member', lazy='dynamic')
     member_loan = db.relationship('MemberLoan', backref='sg_member', lazy='dynamic')
     approved_loan = db.relationship('MemberApprovedLoan', backref='sg_member', lazy='dynamic')
     member_social = db.relationship('MemberSocialFund', backref='sg_member', lazy='dynamic')
@@ -829,6 +831,7 @@ class SavingGroupMember(db.Model):
     contribution = db.relationship('SgMemberContributions', backref='sg_member', lazy='dynamic')
     member_mini_statement = db.relationship('MemberMiniStatement', backref='sg_member', lazy='dynamic')
     meeting_attendance = db.relationship('MeetingAttendance', backref='sg_member', lazy='dynamic')
+    member_drop_out = db.relationship('SavingGroupDropOut', backref='sg_member', lazy='dynamic')
 
     db.Index('member_sg_index', saving_group_id, user_id, unique=True)
 
@@ -853,6 +856,7 @@ class SavingGroupMember(db.Model):
             'date': self.date,
             'user': self.users.export_data(),
             'self_url': self.get_url(),
+            'activate': self.activate,
             'sg_url': url_for('api.get_sg', id=self.saving_group_id, _external=True),
             'approved_loan_url': url_for('api.get_member_approve_loan', id=self.id, _external=True),
             'pending_loan_url': url_for('api.get_member_pending_loan', id=self.id, _external=True),
@@ -871,6 +875,9 @@ class SavingGroupMember(db.Model):
         except KeyError as e:
             raise ValidationError('Invalid sg_member '+ e.args[0])
         return self
+
+    def drop_out(self):
+        self.activate = 0
 
     @classmethod
     def group_admin(cls, saving_group_id):
@@ -929,7 +936,7 @@ class SavingGroupDropOut(db.Model):
     __tablename__ = 'sg_drop_out'
     id = db.Column(db.Integer, primary_key=True)
     date = db.Column(db.DateTime, default=datetime.utcnow())
-    sg_member_id = db.Column(db.Integer, db.ForeignKey('sg_member.id'), index=True)
+    member_id = db.Column(db.Integer, db.ForeignKey('sg_member.id'), index=True)
     sg_cycle_id = db.Column(db.Integer, db.ForeignKey('sg_cycle.id'), index=True)
 
     def get_url(self):
