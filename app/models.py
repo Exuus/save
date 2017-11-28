@@ -268,13 +268,23 @@ class SavingGroupWallet(db.Model):
         return self
 
     def debit_wallet(self, amount):
-        self.amount = self.amount + float(amount)
+        self.amount = self.amount - float(amount)
         return self
 
     @classmethod
     def wallet(cls, saving_group_id):
         return SavingGroupWallet.query. \
             filter(SavingGroupWallet.saving_group_id == saving_group_id).first()
+
+    def balance(self):
+        return self.amount
+
+    def share_out(self, shared_amount):
+        balance = float(self.amount) - float(shared_amount)
+        return {
+            'reinvested_amount': balance,
+            'shared_amount': shared_amount
+        }
 
 
 class SavingGroupShareOut(db.Model):
@@ -802,6 +812,7 @@ class SavingGroupCycle(db.Model):
     sg_shares = db.relationship('SavingGroupShares', backref='sg_cycle', lazy='dynamic')
     sg_meeting = db.relationship('SavingGroupMeeting', backref='sg_cycle', lazy='dynamic')
     sg_member = db.relationship('SavingGroupMember', backref='sg_cycle', lazy='dynamic')
+    share_out = db.relationship('SavingGroupShareOut', backref='sg_cycle', lazy='dynamic')
     db.Index('unique_cycle', start, end, saving_group_id, unique=True)
 
     def get_url(self):
