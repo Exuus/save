@@ -2,8 +2,14 @@ from flask import request
 from ... import api
 from .... import db
 from ....models import SavingGroupCycle, SavingGroupMember, \
-    SavingGroupDropOut, MemberLoan
+    SavingGroupDropOut, MemberLoan, SavingGroup
 from ....decorators import json, paginate, no_cache
+
+
+@api.route('/drop-out/<int:id>/', methods=['GET'])
+@json
+def get_member_drop(id):
+    return SavingGroupDropOut.query.get_or_404(id)
 
 
 @api.route('/members/<int:id>/drop-out/', methods=['POST'])
@@ -26,6 +32,18 @@ def drop_out(id):
             db.session.commit()
             return {}, 201
     return {}, 404
+
+
+@api.route('/sg/<int:id>/drop-out/', methods=['GET'])
+@no_cache
+@json
+@paginate('drop_out')
+def get_sg_drop_out(id):
+    return SavingGroupDropOut.query\
+        .join(SavingGroupMember, SavingGroup)\
+        .filter(SavingGroupMember.id == SavingGroupDropOut.member_id)\
+        .filter(SavingGroupMember.saving_group_id == SavingGroup.id)\
+        .filter(SavingGroup.id == id)
 
 
 
