@@ -277,6 +277,33 @@ class SavingGroupWallet(db.Model):
             filter(SavingGroupWallet.saving_group_id == saving_group_id).first()
 
 
+class SavingGroupShareOut(db.Model):
+    __tablename__ = 'sg_share_out'
+    id = db.Column(db.Integer, primary_key=True)
+    shared_amount = db.Column(db.Float)
+    reinvested_amount = db.Column(db.Float)
+    cycle_id = db.Column(db.Integer, db.ForeignKey('sg_cycle.id'), index=True)
+
+    def get_url(self):
+        return url_for('api.get_share_out', id=self.id, _external=True)
+
+    def export_data(self):
+        return {
+            'id': self.id,
+            'shared_amount': self.shared_amount,
+            'reinvested_amount': self.reinvested_amount,
+            'cycle_id': self.cycle_id
+        }
+
+    def import_data(self, data):
+        try:
+            self.shared_amount = data['shared_amount']
+            self.reinvested_amount = data['reinvested_amount']
+        except KeyError as e:
+            raise ValidationError('Invalid SG Share Out ' + e.args[0])
+        return self
+
+
 class SgMemberContributions(db.Model):
     __tablename__ = 'sg_member_contributions'
     id = db.Column(db.Integer, primary_key=True)
@@ -940,13 +967,14 @@ class SavingGroupDropOut(db.Model):
     sg_cycle_id = db.Column(db.Integer, db.ForeignKey('sg_cycle.id'), index=True)
 
     def get_url(self):
-        return url_for('api.get_sg_member_drop', id=self.id, _external=True)
+        return url_for('api.get_member_drop', id=self.id, _external=True)
 
     def export_data(self):
         return {
             'id': self.id,
             'date': self.date,
-            'sg_member_id': self.sg_member_id
+            'member_id': self.member_id,
+            'cycle_id': self.sg_cycle_id
         }
 
     def import_data(self, data):
