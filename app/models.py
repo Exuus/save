@@ -219,7 +219,8 @@ class SavingGroup(db.Model):
             'shares_url': url_for('api.get_sg_current_shares', id=self.id, _external=True),
             'fines_url': url_for('api.get_sg_current_fines', id=self.id, _external=True),
             'meetings_url': url_for('api.get_sg_meetings', id=self.id, _external=True),
-            'organization_id': self.organization_id
+            'organization_id': self.organization_id,
+            'project_url': url_for('api.get_project', id=self.project_id, _external=True)
         }
 
     def import_data(self, data):
