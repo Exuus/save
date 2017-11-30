@@ -2,7 +2,7 @@ from flask import request
 from .. import api
 from ... import db
 from ...models import SavingGroupShareOut, SavingGroupCycle, \
-    SavingGroup, SavingGroupWallet
+    SavingGroup, SavingGroupWallet, SgMemberContributions, SavingGroupShares
 from ...decorators import json, paginate, no_cache
 
 
@@ -18,4 +18,22 @@ def new_share_out(id):
     sg = SavingGroup.query.get_or_404(id)
     cycle = SavingGroupCycle.current_cycle(sg.id)
     wallet = SavingGroupWallet.wallet(sg.id)
-    return wallet.share_out(request.json['shared_amount'])
+    wallet_balance = wallet.balance()
+    share_out = wallet.share_out(request.json['shared_amount'])
+    savings = SgMemberContributions.member_savings(sg.id)
+    total_savings = SgMemberContributions.total_savings(sg.id)
+    #return [wallet_balance, savings]
+    data = list()
+    shares = 0
+    for saving in savings:
+        json = dict()
+        json['saving'] = saving[0]
+        json['member_id'] = saving[1]
+        json['share'] = SavingGroupShares.calculate_shares(saving[0], sg.id)
+        json['percentage_share'] = (json['saving']/total_savings) * 100
+        json['share_out_amount'] = (json['percentage_share'] * float(share_out['shared_amount']))/100
+        shares += json['share']
+        data.append(json)
+    return data
+
+
