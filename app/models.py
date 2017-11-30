@@ -359,11 +359,45 @@ class SgMemberContributions(db.Model):
                         SgMemberContributions.type == 1)).first()
 
     @classmethod
+    def total_savings(cls, sg_id):
+        cycle = SavingGroupCycle.current_cycle(sg_id)
+        savings = db.session\
+            .query(func.sum(SgMemberContributions.amount).label('savings'))\
+            .join(SavingGroupMember)\
+            .filter(SgMemberContributions.sg_member_id == SavingGroupMember.id)\
+            .join(SavingGroup)\
+            .filter(SavingGroup.id == SavingGroupMember.saving_group_id)\
+            .filter(SavingGroup.id == sg_id) \
+            .join(SavingGroupCycle) \
+            .filter(SavingGroupCycle.id == SgMemberContributions.sg_cycle_id) \
+            .filter(SavingGroupCycle.id == cycle.id) \
+            .first()[0]
+        return savings
+
+    @classmethod
     def sum_social_fund(cls, member_id):
         return db.session. \
             query(func.sum(SgMemberContributions.amount).label('amount')). \
             filter(and_(SgMemberContributions.sg_member_id == member_id,
                         SgMemberContributions.type == 2)).first()
+
+    @classmethod
+    def member_savings(cls, sg_id):
+        cycle = SavingGroupCycle.current_cycle(sg_id)
+        return db.session\
+            .query(func.sum(SgMemberContributions.amount).label('saving'), SgMemberContributions.sg_member_id)\
+            .filter(SgMemberContributions.type == 1)\
+            .join(SavingGroupMember)\
+            .filter(SavingGroupMember.id == SgMemberContributions.sg_member_id)\
+            .filter(SavingGroupMember.activate == 1)\
+            .join(SavingGroup)\
+            .filter(SavingGroup.id == SavingGroupMember.saving_group_id)\
+            .filter(SavingGroup.id == sg_id) \
+            .join(SavingGroupCycle) \
+            .filter(SavingGroupCycle.id == SgMemberContributions.sg_cycle_id) \
+            .filter(SavingGroupCycle.id == cycle.id) \
+            .group_by(SgMemberContributions.sg_member_id)\
+            .all()
 
 
 class MemberLoan(db.Model):
@@ -691,8 +725,17 @@ class SavingGroupShares(db.Model):
             ValidationError('Invalid SavingGroupShares' + e.args[0])
         return self
 
-    def calculate_shares(self, savings):
-        return round(float(savings/self.share), 1)
+    @classmethod
+    def calculate_shares(cls, saving, sg_id):
+        cycle = SavingGroupCycle.current_cycle(sg_id)
+        shares = db.session.query(SavingGroupShares.share)\
+            .join(SavingGroupCycle, SavingGroup)\
+            .filter(SavingGroupCycle.id == SavingGroupShares.sg_cycle_id)\
+            .filter(SavingGroupCycle.id == cycle.id)\
+            .filter(SavingGroup.id == SavingGroupShares.saving_group_id)\
+            .filter(SavingGroup.id == sg_id).first()[0]
+
+        return round(saving/shares, 1)
 
 
 class SavingGroupFines(db.Model):
