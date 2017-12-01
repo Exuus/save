@@ -473,7 +473,9 @@ class MemberLoan(db.Model):
             'initial_loan_plus_interest': initial_loan_interest,
             'total_loan_interest_plus_fine': total_to_pay,
             'fine': loan.calculate_fine(),
-            'expect_date_repayment': loan.request_date + timedelta(days=loan.initial_date_repayment)
+            'expect_date_repayment': loan.request_date + timedelta(days=loan.initial_date_repayment),
+            "wallet_id": loan.sg_wallet_id,
+            'amount_loaned': loan.amount_loaned
         }
 
     def get_payment_status(self, remain):
@@ -487,6 +489,34 @@ class MemberLoan(db.Model):
         if self.payment_type == 0:
             return 'write-off'
         return 'self-payed'
+
+    @classmethod
+    def post_loan(cls, member, data_json, admins):
+        wallet = SavingGroupWallet.query. \
+            filter(SavingGroupWallet.saving_group_id == member.saving_group_id).first()
+        cycle = SavingGroupCycle.current_cycle(member.saving_group_id)
+
+        loan = MemberLoan(
+            sg_cycle=cycle,
+            sg_wallet=wallet,
+            sg_member=member
+        )
+
+        loan.import_data(data_json)
+        db.session.add(loan)
+        db.session.commit()
+
+        """ add member approve Request """
+
+        for admin in admins:
+            data = dict()
+            data['status'] = 2
+            data['sg_member_id'] = admin.export_data()['id']
+            approved_loan = MemberApprovedLoan(member_loan=loan)
+            approved_loan.import_data(data)
+            db.session.add(approved_loan)
+            db.session.commit()
+        return cls
 
     def calculate_fine(self):
         repayment_date = self.request_date + timedelta(days=self.initial_date_repayment)
