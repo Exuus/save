@@ -97,38 +97,19 @@ def new_loan_request(id):
         .filter_by(sg_member_id=member.id)\
         .order_by(MemberLoan.date_payment.desc())\
         .first()
-    loan = MemberLoan.get_loan_balance(loan)
-    if loan['status'] == 'payed':
-        if member:
-            if len(admins.all()):
-                if member.verify_pin(request.json['pin']):
-                    wallet = SavingGroupWallet.query. \
-                        filter(SavingGroupWallet.saving_group_id == member.saving_group_id).first()
-                    cycle = SavingGroupCycle.current_cycle(member.saving_group_id)
+    if loan:
+        loan = MemberLoan.get_loan_balance(loan)
+        if loan['status'] == 'payed':
+            if member:
+                if len(admins.all()):
+                    if member.verify_pin(request.json['pin']):
+                        MemberLoan.post_loan(member, request.json, admins)
+                        return {}, 201
 
-                    loan = MemberLoan(
-                        sg_cycle=cycle,
-                        sg_wallet=wallet,
-                        sg_member=member
-                    )
-
-                    loan.import_data(request.json)
-                    db.session.add(loan)
-                    db.session.commit()
-
-                    """ add member approve Request """
-
-                    for admin in admins:
-                        data = dict()
-                        data['status'] = 2
-                        data['sg_member_id'] = admin.export_data()['id']
-                        approved_loan = MemberApprovedLoan(member_loan=loan)
-                        approved_loan.import_data(data)
-                        db.session.add(approved_loan)
-                        db.session.commit()
-                    return {}, 201, {'Location': loan.get_url()}
-
-    return {}, 404
+        return {}, 404
+    else:
+        MemberLoan.post_loan(member, request.json, admins)
+        return {}, 201
 
 
 @api.route('/member/admin/<int:member_id>/approve/loan/<int:id>/', methods=['PUT'])
@@ -140,6 +121,7 @@ def approve_loan(member_id, id):
     if member:
         try:
             if member.verify_pin(request.json['pin']):
+
                 approved_loan = MemberApprovedLoan.query.get_or_404(id)
                 approved_loan.approve_loan()
                 db.session.add(approved_loan)
@@ -147,10 +129,18 @@ def approve_loan(member_id, id):
 
                 admins = SavingGroupMember.count_group_admin(member.saving_group_id)[0]
                 loan_approved = MemberApprovedLoan.get_approved_loan(approved_loan.loan_id)[0]
-
+                wallet = SavingGroupWallet.wallet(member.saving_group_id)
+                wallet_balance = wallet.balance()
+                loan = MemberLoan.query.get_or_404(approved_loan.loan_id)
+                amount_loaned = MemberLoan.get_loan_balance(loan)['amount_loaned']
                 approval = 0
                 if admins == loan_approved:
                     approval = 1
+                    if amount_loaned > wallet_balance:
+                        return {'status': 'not enough found'}, 200
+                    wallet.debit_wallet(amount_loaned)
+                    db.session.add(wallet)
+                    db.session.commit()
 
                 return {}, 200, {'Loan-Approval': approval}
         except AttributeError:
@@ -185,6 +175,7 @@ def new_loan_repayment(id):
     payed = balance['payed_amount']
     total = balance['total_loan_interest_plus_fine']
     remain = balance['remain_amount']
+    wallet = SavingGroupWallet.query.get_or_404(balance['wallet_id'])
 
     if float(request.json['amount']) > float(remain):
         return {}, 404
@@ -192,7 +183,9 @@ def new_loan_repayment(id):
     if payed < total:
         loan_repayment = MemberLoanRepayment(member_loan=loan)
         loan_repayment.import_data(request.json)
+        wallet.credit_wallet(request.json['amount'])
         db.session.add(loan_repayment)
+        db.session.add(wallet)
         db.session.commit()
         balance = MemberLoan.get_loan_balance(loan)
         if balance['status'] == 'payed':
