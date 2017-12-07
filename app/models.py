@@ -116,6 +116,7 @@ class User(db.Model):
             'id_number': self.id_number,
             'location': self.location,
             'confirmation_code': self.confirmation_code,
+            'organization': self.organization.export_data(),
             'projects_url': url_for('api.get_users_projects', id=self.id, _external=True),
             'financial_details': url_for('api.get_fin_details', id=self.id, _external=True)
         }
