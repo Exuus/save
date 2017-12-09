@@ -51,7 +51,6 @@ class Organization(db.Model):
     def import_data(self, data):
         try:
             self.name = data['name'],
-            self.name
             self.type = data['type'],
             self.email = data['email'],
             self.phone = data['phone'],
@@ -109,7 +108,7 @@ class User(db.Model):
             'phone': self.phone,
             'date': self.date,
             'type': self.type,
-            'birth_date': datetime.strptime(str(self.birth_date), "%Y-%m-%d").date(),
+            'birth_date': self.birth_date,
             'gender': self.gender,
             'education': self.education,
             'first_login': self.first_login,
