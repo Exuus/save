@@ -109,7 +109,7 @@ class User(db.Model):
             'phone': self.phone,
             'date': self.date,
             'type': self.type,
-            'birth_date': self.birth_date,
+            'birth_date': datetime.strptime(str(self.birth_date), "%Y-%m-%d").date(),
             'gender': self.gender,
             'education': self.education,
             'first_login': self.first_login,
@@ -127,14 +127,18 @@ class User(db.Model):
             if data['username'] is None:
                 self.username = generate_username(data['name'])
             self.name = data['name']
+
             self.email = data['email']
             if data['email'] is None:
                 self.email = generate_email(data['name'])
+
             self.phone = data['phone']
             self.type = data['type']
             self.birth_date = datetime.strptime(data['birth_date'], "%Y-%m-%d").date()
             self.gender = data['gender']
             self.education = data['education']
+            if self.education is None:
+                self.education = None
             self.id_number = data['id_number']
             self.location = data['location']
         except KeyError as e:
@@ -968,6 +972,7 @@ class SavingGroupMember(db.Model):
             'admin': self.admin,
             'date': self.date,
             'user': self.users.export_data(),
+            'user_id': self.user_id,
             'self_url': self.get_url(),
             'activate': self.activate,
             'sg_url': url_for('api.get_sg', id=self.saving_group_id, _external=True),
