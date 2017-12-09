@@ -34,6 +34,14 @@ def get_users_members(phone):
     return {}, 404
 
 
+@api.route('/organizations/<int:id>/users/', methods=['GET'])
+@json
+@paginate('users')
+def get_organization_users(id):
+    organization = Organization.query.get_or_404(id)
+    return organization.users.filter_by(type=1)
+
+
 @api.route('/organizations/<int:id>/agents/', methods=['GET'])
 @json
 @paginate('agents')
@@ -105,7 +113,7 @@ def edit_users(id):
     return {}
 
 
-@api.route('/users/<int:id>/reset-password/', methods=['PUT'])
+@api.route('/users/<int:id>/change-password/', methods=['PUT'])
 @json
 def reset_user_password(id):
     user = User.query.get_or_404(id)
