@@ -110,7 +110,7 @@ def edit_users(id):
 def reset_user_password(id):
     user = User.query.get_or_404(id)
     if user.verify_password(request.json['password']):
-        user.set_password(request.json['new-password'])
+        user.set_password(request.json['new_password'])
         db.session.add(user)
         db.session.commit()
         return {}, 200
@@ -136,6 +136,15 @@ def check_user_national_id(id_number):
 @json
 def check_user_phone(phone):
     user = User.query.filter_by(phone=phone).first()
+    if user:
+        return {}, 200
+    return {}, 404
+
+
+@api.route('/users/<email>/email/', methods=['GET'])
+@json
+def check_user_email(email):
+    user = User.query.filter_by(email=email).first()
     if user:
         return {}, 200
     return {}, 404
