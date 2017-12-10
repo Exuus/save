@@ -6,6 +6,7 @@ from ..decorators import json, paginate, no_cache
 from sqlalchemy.exc import IntegrityError
 from ..errorhandlers import internal_server_error
 from ..save_sms import save_sms
+from ..save_email import Email
 
 
 @api.route('/users/', methods=['GET'])
@@ -115,7 +116,7 @@ def edit_users(id):
 
 @api.route('/users/<int:id>/change-password/', methods=['PUT'])
 @json
-def reset_user_password(id):
+def change_user_password(id):
     user = User.query.get_or_404(id)
     if user.verify_password(request.json['password']):
         user.set_password(request.json['new_password'])
@@ -123,6 +124,50 @@ def reset_user_password(id):
         db.session.commit()
         return {}, 200
     return {}, 404
+
+
+@api.route('/users/<email>/recover/', methods=['PUT'])
+@json
+def recover_user_password(email):
+    user = User.query.filter_by(email=email).first()
+    if user:
+        key = Email(user.name, user.username, user.email)
+        return {}, 200
+    return {}, 404
+
+
+@api.route('/users/<phone>/reset/', methods=['PUT'])
+@json
+def reset_user_passwords(phone):
+    user = User.query.filter_by(phone=phone).first()
+    if user:
+        save_sms(user.phone, user.generate_sms_key())
+        db.session.add(user)
+        db.session.commit()
+        return {}, 200
+    return {}, 404
+
+
+@api.route('/users/<key>/reset/', methods=['GET'])
+@json
+def user_key_reset(key):
+    user = User.query.filter_by(key=key).first()
+    if user:
+        user.reset_key()
+        db.session.add(user)
+        db.session.commit()
+        return user
+    return {}, 404
+
+
+@api.route('/users/<int:id>/reset-password/', methods=['POST'])
+@json
+def reset_user_password(id):
+    user = User.query.get_or_404(id)
+    user.set_password(request.json['new_password'])
+    db.session.add(user)
+    db.session.commit()
+    return {}, 200
 
 
 @api.route('/users/sms/', methods=['POST'])
