@@ -8,6 +8,7 @@ from flask_mail import Mail
 from .decorators import json, no_cache, rate_limit
 from .errorhandlers import bad_request, forbidden, not_found, method_not_supported
 from raven.contrib.flask import Sentry
+from kenessa import Kenessa
 
 
 # local imports
@@ -17,6 +18,7 @@ from config import app_config
 db = SQLAlchemy()
 bcrypt = Bcrypt()
 mail = Mail()
+kenessa = Kenessa()
 
 sentry = Sentry(dsn='https://0a153deed31b4153b44a461665152c44:31dd524796684a248b814c4ebd0d111b@sentry.io/236088')
 
