@@ -19,7 +19,8 @@ def after_request(rv):
     return rv
 
 
-from . import users, organizations, project, intervention, village, user_fin_details
+from . import users, organizations, project, intervention, village, \
+    user_fin_details, kenessa
 from sg import saving_group, cycle, wallet, meeting, share_out
 from sg.member import pin, social_fund, loan, contributions, \
     fine, ministatement, shares, drop_out
