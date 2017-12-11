@@ -22,11 +22,12 @@ def get_project_intervention_area(id):
 @api.route('/projects/<int:id>/intervention/', methods=['POST'])
 @json
 def new_intervention(id):
-    project = Project.query.get_or_404(id)
-    intervention = InterventionArea(project=project)
-    intervention.import_data(request.json)
-    db.session.add(intervention)
-    db.session.commit()
+    for area in request.json:
+        project = Project.query.get_or_404(id)
+        intervention = InterventionArea(project=project)
+        intervention.import_data(area)
+        db.session.add(intervention)
+        db.session.commit()
 
     return {}, 201, {'Location': intervention.get_url()}
 
