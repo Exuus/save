@@ -26,7 +26,7 @@ def new_organization():
     organization.import_data(request.json)
     db.session.add(organization)
     db.session.commit()
-    return {}, 201, {'Location': organization.get_url()}
+    return organization, 201, {'Location': organization.get_url()}
 
 
 @api.route('/organizations/<int:id>', methods=['PUT'])
