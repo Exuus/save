@@ -1183,7 +1183,6 @@ class Project(db.Model):
     donor = db.Column(db.String(240))
     date = db.Column(db.DateTime, default=datetime.utcnow())
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
-    partner_id = db.Column(db.Integer)
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), index=True)
     intervention = db.relationship('InterventionArea', backref='project', lazy='dynamic')
     project_agent = db.relationship('ProjectAgent', backref='project', lazy='dynamic')
@@ -1213,13 +1212,12 @@ class Project(db.Model):
 
     def import_data(self, data):
         try:
-            self.name = data['name'],
-            self.start = data['start'],
-            self.end = data['end'],
-            self.budget = data['budget'],
-            self.donor = data['donor'],
-            self.user_id = data['user_id'],
-            self.partner_id = data['partner_id']
+            self.name = data['name']
+            self.start = data['start']
+            self.end = data['end']
+            self.budget = data['budget']
+            self.donor = data['donor']
+            self.user_id = data['user_id']
 
         except KeyError as e:
             raise ValidationError('Invalid order: missing ' + e.args[0])
@@ -1272,7 +1270,7 @@ class InterventionArea(db.Model):
     __tablename__ = 'intervention_area'
     id = db.Column(db.Integer, primary_key=True)
     date = db.Column(db.DateTime, default=datetime.utcnow())
-    village_id = db.Column(db.Integer, db.ForeignKey('village.id'), index=True)
+    village_id = db.Column(db.Integer)
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'), index=True)
 
     def get_url(self):
@@ -1282,7 +1280,7 @@ class InterventionArea(db.Model):
         return {
             'self_url': self.get_url(),
             'date': self.date,
-            'village': self.village.export_data()
+            'village': self.village_id
         }
 
     def export_agent_project(self):
@@ -1292,7 +1290,7 @@ class InterventionArea(db.Model):
 
     def import_data(self, data):
         try:
-            self.village_id = data['village_id']
+            self.village_id = int(data['village_id'])
         except KeyError as e:
             raise ValidationError('Invalid order: missing ' + e.args[0])
         return self
@@ -1303,7 +1301,7 @@ class Village(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50))
     code = db.Column(db.String(20), unique=True)
-    intervention = db.relationship('InterventionArea', backref='village', lazy='dynamic')
+    #intervention = db.relationship('InterventionArea', backref='village', lazy='dynamic')
     saving_group = db.relationship('SavingGroup', backref='village', lazy='dynamic')
 
     def get_url(self):
