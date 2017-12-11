@@ -1,7 +1,7 @@
 from flask import request
 from . import api
 from .. import db
-from ..models import Project, Organization, User, ProjectAgent
+from ..models import Project, Organization, User, ProjectAgent, ProjectPartner
 from ..decorators import json, paginate, no_cache
 from sqlalchemy.exc import IntegrityError
 
@@ -54,7 +54,7 @@ def new_project(id):
     project.import_data(request.json)
     db.session.add(project)
     db.session.commit()
-    return {}, 201, {'Location': project.get_url()}
+    return project, 201, {'Location': project.get_url()}
 
 
 @api.route('/project/<int:id>/agents/', methods=['POST'])
@@ -80,3 +80,14 @@ def edit_project(id):
     db.session.add(project)
     db.session.commit()
     return {}
+
+
+@api.route('/projects/<int:id>/partners/<int:partner_id>/', methods=['POST'])
+@json
+def project_partners(id, partner_id):
+    project = Project.query.get_or_404(id)
+    partner = Organization.query.get_or_404(partner_id)
+    project_partner = ProjectPartner(project=project, organization=partner)
+    db.session.add(project_partner)
+    db.session.commit()
+    return {}, 201
