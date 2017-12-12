@@ -1,7 +1,7 @@
 from flask import request
 from . import api
 from .. import db
-from ..models import Project, Organization, User, ProjectAgent, ProjectPartner
+from ..models import Project, Organization, User, ProjectAgent, ProjectPartner, SavingGroup
 from ..decorators import json, paginate, no_cache
 from sqlalchemy.exc import IntegrityError
 
@@ -91,3 +91,16 @@ def project_partners(id, partner_id):
     db.session.add(project_partner)
     db.session.commit()
     return {}, 201
+
+
+@api.route('/projects/<int:id>/agents/', methods=['GET'])
+@json
+@paginate('project_agents')
+def get_projects_agent(id):
+    project = Project.query.get_or_404(id)
+    return project.project_agent
+
+
+
+
+
