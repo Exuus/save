@@ -7,6 +7,7 @@ from .exceptions import ValidationError
 from .utils import generate_code, generate_username, generate_email, monthdelta
 from sqlalchemy import and_, func
 import arrow
+from decorators import paginate
 
 
 class Organization(db.Model):
@@ -80,6 +81,7 @@ class User(db.Model):
     first_login = db.Column(db.Integer, default=1)  # 1 never logged in # 0 already logged in
     confirmation_code = db.Column(db.String(12), default=generate_code())
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), index=True)
+    partner_id = db.Column(db.Integer, index=True)
     project = db.relationship('Project', backref='users', lazy='dynamic')
     financial = db.relationship('UserFinDetails', backref='users', lazy='dynamic')
     project_agent = db.relationship('ProjectAgent', backref='users', lazy='dynamic')
@@ -125,6 +127,7 @@ class User(db.Model):
             'location': self.location,
             'confirmation_code': self.confirmation_code,
             'organization': self.organization.export_data(),
+            'sg_url': url_for('api.get_agent_sg', id=self.id, _external=True),
             'projects_url': url_for('api.get_users_projects', id=self.id, _external=True),
             'financial_details': url_for('api.get_fin_details', id=self.id, _external=True)
         }
@@ -226,6 +229,7 @@ class SavingGroup(db.Model):
             'status': self.status,
             'location': self.village.export_data(),
             'agent_id': self.agent_id,
+            'agent': self.users.export_data(),
             'members_url': url_for('api.get_sg_members', id=self.id, _external=True),
             'cycle_url': url_for('api.get_sg_cycle', id=self.id, _external=True),
             'wallet': url_for('api.get_sg_wallet', id=self.id, _external=True),
@@ -247,6 +251,19 @@ class SavingGroup(db.Model):
         except KeyError as e:
             raise ValidationError('Invalid order: missing ' + e.args[0])
         return self
+
+    @classmethod
+    def project_agent_sg(cls, project_id):
+        return db.session.query(func.count(SavingGroup.id).label('sg_count'),
+                                User.name.label('user_name'), User.id.label('agent_id'),
+                                SavingGroup.village_id, Project.name.label('project_name'),
+                                Project.id.label('id'))\
+            .join(User)\
+            .filter(User.id == SavingGroup.agent_id)\
+            .join(Project)\
+            .filter(SavingGroup.project_id == Project.id)\
+            .filter(Project.id == project_id)\
+            .group_by(User.name, User.id, SavingGroup.village_id, Project.name, Project.id)
 
 
 class SavingGroupWallet(db.Model):
@@ -1236,8 +1253,8 @@ class ProjectAgent(db.Model):
 
     def export_data(self):
         return {
-            'project': self.project.export_data(),
-            'date': self.date
+            'date': self.date,
+            'users': self.users.export_data()
         }
 
     def import_data(self, data):
