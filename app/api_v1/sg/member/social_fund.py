@@ -125,6 +125,9 @@ def approve_social(member_id, id):
                 if admins == approve_social_fund:
                     approval = 1
 
+                # Bugs to fix debit wallet on social fund issued
+                # check if there is available balance to Give
+
                 return {}, 200, {'Social-Fund-Approval': approval}
         except AttributeError:
             return {}, 200
