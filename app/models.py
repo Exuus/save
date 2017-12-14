@@ -7,7 +7,6 @@ from .exceptions import ValidationError
 from .utils import generate_code, generate_username, generate_email, monthdelta
 from sqlalchemy import and_, func
 import arrow
-from decorators import paginate
 
 
 class Organization(db.Model):
@@ -207,7 +206,7 @@ class SavingGroup(db.Model):
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), index=True)
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'), index=True)
     agent_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
-    village_id = db.Column(db.Integer, db.ForeignKey('village.id'), index=True)
+    village_id = db.Column(db.Integer, index=True)
 
     sg_financial = db.relationship('SavingGroupFinDetails', backref='saving_group', lazy='dynamic')
     sg_member = db.relationship('SavingGroupMember', backref='saving_group', lazy='dynamic')
@@ -1320,7 +1319,7 @@ class Village(db.Model):
     name = db.Column(db.String(50))
     code = db.Column(db.String(20), unique=True)
     #intervention = db.relationship('InterventionArea', backref='village', lazy='dynamic')
-    saving_group = db.relationship('SavingGroup', backref='village', lazy='dynamic')
+    #saving_group = db.relationship('SavingGroup', backref='village', lazy='dynamic')
 
     def get_url(self):
         return url_for('api.get_village', id=self.id, _external=True)
