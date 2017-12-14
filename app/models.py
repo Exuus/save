@@ -124,7 +124,8 @@ class User(db.Model):
             'education': self.education,
             'first_login': self.first_login,
             'id_number': self.id_number,
-            'location': self.location,
+            'location': kenessa.get_all_from_village_id(self.location),
+            'village_id': self.location,
             'confirmation_code': self.confirmation_code,
             'organization': self.organization.export_data(),
             'sg_url': url_for('api.get_agent_sg', id=self.id, _external=True),
@@ -1016,7 +1017,6 @@ class SavingGroupMember(db.Model):
         try:
             self.user_id = data['user_id']
             self.admin = data['admin']
-            self.village_id = data['village_id']
         except KeyError as e:
             raise ValidationError('Invalid sg_member '+ e.args[0])
         return self
