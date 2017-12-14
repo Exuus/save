@@ -35,3 +35,9 @@ def get_kenessa_cell(sector_id):
 def get_kenessa_village(cell_id):
     cell_id = cell_id.split(',')
     return kenessa.get_village(cell_id)
+
+
+@api.route('/kenessa/<village_id>/locations/')
+@json
+def get_name_location(village_id):
+    return kenessa.get_all_from_village_id(village_id)
