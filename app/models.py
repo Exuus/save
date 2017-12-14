@@ -228,6 +228,7 @@ class SavingGroup(db.Model):
             'creation_date': self.creation_date,
             'status': self.status,
             'location': self.village.export_data(),
+            'location_id': self.village_id,
             'agent_id': self.agent_id,
             'agent': self.users.export_data(),
             'members_url': url_for('api.get_sg_members', id=self.id, _external=True),
