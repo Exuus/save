@@ -7,6 +7,7 @@ from .exceptions import ValidationError
 from .utils import generate_code, generate_username, generate_email, monthdelta
 from sqlalchemy import and_, func
 import arrow
+from . import kenessa
 
 
 class Organization(db.Model):
@@ -227,6 +228,7 @@ class SavingGroup(db.Model):
             'creation_date': self.creation_date,
             'status': self.status,
             'village_id': self.village_id,
+            'location': kenessa.get_all_from_village_id(self.village_id),
             'agent_id': self.agent_id,
             'agent': self.users.export_data(),
             'members_url': url_for('api.get_sg_members', id=self.id, _external=True),
@@ -1014,6 +1016,7 @@ class SavingGroupMember(db.Model):
         try:
             self.user_id = data['user_id']
             self.admin = data['admin']
+            self.village_id = data['village_id']
         except KeyError as e:
             raise ValidationError('Invalid sg_member '+ e.args[0])
         return self
