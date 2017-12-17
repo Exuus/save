@@ -42,10 +42,21 @@ class Email:
 
 
 def help(names, email, title, message):
-    footer = "For any inquiry e-mail us on info@cartix.io or call us on +250 785-489-992<p>Thanks for using Cartix, enjoy.<br>Cartix Team"
-    msg = Message('[Cartix][Help]', sender='Cartix Team', recipients=['support@cartix.io'])
+    footer = "For any inquiry e-mail us on info@getsave.io or call us on +250 785-489-992<p>Thanks for using Save, enjoy.<br>Save Team"
+    msg = Message('[Save][Support]', sender='Save Support', recipients=['support@getsave.io'])
     msg.add_recipient(email)
-    content = '<div style=padding-left:20px;width:100%;background-color:#fff><div style=margin-left:0;padding-top:50px;padding-bottom:20px><img src=http://savinggroup.cartix.io/assets/img/mail/letter-logo1.png style=margin-left:-10px;margin-top:20px;height:40px><p style=font-family:sans-serif;margin-left:0;padding-top:15px;color:#424242>Hallo <span style=font-weight:700>{names},</span><p style=font-family:sans-serif;margin-left:0;color:#424242>{title}</p><p style=font-family:sans-serif;margin-left:0;color:#424242>"{message}"</p><p style=font-family:sans-serif;margin-left:0;color:#424242>{footer}</div></div><div style=padding-left:20px;width:100%;padding-top:5px;background-color:#FAFAFA><div style=margin-left:0px;margin-top:10px;margin-bottom:10px;><span style=font-family:sans-serif;font-size:12px;margin-left:0;color:#424242>You\'re receiving this message because you are a cartix user send us feedback on info@cartix.io or call us +250785489992</span><p style=font-family:sans-serif;font-size:12px;margin-left:0;color:#424242>Cartix is a product of <a href=http://www.exuus.com target=_blank>exuus Ltd.</a><br>Exuus is a limited corporation registered in Republic of Rwanda.</p></div></div>'.format(names=names, title=title, message=message, footer=footer)
+    content = '<div style=padding-left:20px;width:100%;background-color:#fff>' \
+              '<div style=margin-left:0;padding-top:50px;padding-bottom:20px>' \
+              '<img src=http://savinggroup.cartix.io/assets/img/mail/letter-logo1.png style=margin-left:-10px;margin-top:20px;height:40px>' \
+              '<p style=font-family:sans-serif;margin-left:0;padding-top:15px;color:#424242>Hallo <span style=font-weight:700>{names},</span>' \
+              '<p style=font-family:sans-serif;margin-left:0;color:#424242>{title}</p>' \
+              '<p style=font-family:sans-serif;margin-left:0;color:#424242>"{message}"</p>' \
+              '<p style=font-family:sans-serif;margin-left:0;color:#424242>{footer}</div></div>' \
+              '<div style=padding-left:20px;width:100%;padding-top:5px;background-color:#FAFAFA>' \
+              '<div style=margin-left:0px;margin-top:10px;margin-bottom:10px;>' \
+              '<span style=font-family:sans-serif;font-size:12px;margin-left:0;color:#424242>You\'re receiving this message because you are a cartix user send us feedback on info@cartix.io or call us +250785489992</span>' \
+              '<p style=font-family:sans-serif;font-size:12px;margin-left:0;color:#424242>Cartix is a product of <a href=http://www.exuus.com target=_blank>exuus Ltd.</a>' \
+              '<br>Exuus is a limited corporation registered in Republic of Rwanda.</p></div></div>'.format(names=names, title=title, message=message, footer=footer)
     msg.html = """ {content} """.format(content=content)
     mail.send(msg)
     return True
