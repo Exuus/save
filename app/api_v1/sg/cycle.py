@@ -89,3 +89,12 @@ def get_cycle_savings(id):
     if cycle:
         return cycle.contributions.filter_by(type=1)
     return {}, 404
+
+
+@api.route('/cycles/<int:id>/members/', methods=['GET'])
+@no_cache
+@json
+@paginate('members')
+def get_cycles_members(id):
+    cycle = SavingGroupCycle.query.get_or_404(id)
+    return cycle.sg_member
