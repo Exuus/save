@@ -22,7 +22,15 @@ def new_share_out(id):
     share_out = wallet.share_out(request.json['shared_amount'])
     savings = SgMemberContributions.member_savings(sg.id)
     total_savings = SgMemberContributions.total_savings(sg.id)
-    #return [wallet_balance, savings]
+
+    # Update SG Share out
+    sg_share_out = SavingGroupShareOut(sg_cycle=cycle)
+    sg_share_out.import_data(share_out)
+    wallet.debit_wallet(request.json['shared_amount'])
+    db.session.add(sg_share_out)
+    db.session.add(wallet)
+    db.session.commit()
+
     data = list()
     shares = 0
     for saving in savings:
