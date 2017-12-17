@@ -93,6 +93,14 @@ def project_partners(id, partner_id):
     return {}, 201
 
 
+@api.route('/projects/<int:id>/partner/', methods=['GET'])
+@json
+@paginate('partners')
+def get_project_partner(id):
+    project = Project.query.get_or_404(id)
+    return project.project_partner
+
+
 @api.route('/projects/<int:id>/agents/', methods=['GET'])
 @json
 @paginate('project_agents')
