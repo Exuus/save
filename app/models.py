@@ -1225,7 +1225,7 @@ class Project(db.Model):
             'organization_url': self.organization.get_url(),
             'intervention_area_url': url_for('api.get_project_intervention_area', id=self.id, _external=True),
             'saving_groups_url': url_for('api.get_project_sgs', id=self.id, _external=True),
-            'intl_ngo_url': url_for('api.get_organization', id=self.id, _external=True)
+            'project_partners': url_for('api.get_project_partner', id=self.id, _external=True)
 
         }
 
@@ -1281,6 +1281,7 @@ class ProjectPartner(db.Model):
         return {
             'project_url': url_for('api.get_project', id=self.project_id, _external=True),
             'partner_url': url_for('api.get_organization', id=self.partner_id, _external=True),
+            'partner': self.organization.export_data(),
             'date': self.date
         }
 
@@ -1299,7 +1300,8 @@ class InterventionArea(db.Model):
         return {
             'self_url': self.get_url(),
             'date': self.date,
-            'village': self.village_id
+            'village_id': self.village_id,
+            'location': kenessa.get_all_from_village_id(self.village_id)
         }
 
     def export_agent_project(self):
