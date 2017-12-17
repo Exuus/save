@@ -937,6 +937,7 @@ class SavingGroupCycle(db.Model):
             'social_fund_debit_url': url_for('api.get_cycle_social_fund_debit', id=self.id, _external=True),
             'social_fund_credit_url': url_for('api.get_cycle_social_fund_credit', id=self.id, _external=True),
             'savings_url': url_for('api.get_cycle_savings', id=self.id, _external=True),
+            'members_url': url_for('api.get_cycles_members', id=self.id, _external=True)
 
 
         }
@@ -1141,6 +1142,7 @@ class SavingGroupMeeting(db.Model):
     meeting_date = db.Column(db.Date)
     bank_balance = db.Column(db.Integer)
     external_debt = db.Column(db.Integer)
+    property_at_cycle_start = db.Column(db.String(250))
     created_at = db.Column(db.DateTime, default=datetime.utcnow())
     saving_group_id = db.Column(db.Integer, db.ForeignKey('saving_group.id'), index=True)
     cycle_id = db.Column(db.Integer, db.ForeignKey('sg_cycle.id'), index=True)
@@ -1164,6 +1166,7 @@ class SavingGroupMeeting(db.Model):
             self.meeting_date = datetime.strptime(data['meeting_date'], "%Y-%m-%d").date()
             self.bank_balance = data['bank_balance']
             self.external_debt = data['external_debt']
+            self.property_at_cycle_start = data['property_at_cycle_start']
         except KeyError as e:
             raise ValidationError('Invalid SG_Meeting' + e.args[0])
         return self
