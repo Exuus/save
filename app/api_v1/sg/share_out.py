@@ -4,6 +4,7 @@ from ... import db
 from ...models import SavingGroupShareOut, SavingGroupCycle, \
     SavingGroup, SavingGroupWallet, SgMemberContributions, SavingGroupShares
 from ...decorators import json, paginate, no_cache
+from datetime import date
 
 
 @api.route('/share-out/<int:id>/', methods=['GET'])
@@ -23,12 +24,25 @@ def new_share_out(id):
     savings = SgMemberContributions.member_savings(sg.id)
     total_savings = SgMemberContributions.total_savings(sg.id)
 
-    # Update SG Share out
+    # Update SG Share out and Wallet
     sg_share_out = SavingGroupShareOut(sg_cycle=cycle)
     sg_share_out.import_data(share_out)
     wallet.debit_wallet(request.json['shared_amount'])
     db.session.add(sg_share_out)
     db.session.add(wallet)
+    db.session.commit()
+
+    # Update Cycle
+    cycle.deactivate()
+    db.session.add(cycle)
+    db.session.commit()
+    cycle = SavingGroupCycle(saving_group=sg)
+    json = dict()
+    today = date.today()
+    json['start'] = today.strftime('%Y-%m-%d')
+    json['end'] = date(today.year + 1, today.month, today.day).strftime('%Y-%m-%d')
+    cycle.import_data(json)
+    db.session.add(cycle)
     db.session.commit()
 
     data = list()
