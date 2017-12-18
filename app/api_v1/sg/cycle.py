@@ -2,7 +2,8 @@ from flask import request
 from .. import api
 from ... import db
 from ...models import SavingGroupCycle, SavingGroup, MemberSocialFund, \
-    MemberApprovedSocial, MemberApprovedLoan, MemberLoan
+    MemberApprovedSocial, MemberApprovedLoan, MemberLoan, MemberCycle, \
+    SavingGroupShareOut
 from ...decorators import json, paginate, no_cache
 from sqlalchemy.exc import IntegrityError
 
@@ -97,4 +98,20 @@ def get_cycle_savings(id):
 @paginate('members')
 def get_cycles_members(id):
     cycle = SavingGroupCycle.query.get_or_404(id)
-    return cycle.sg_member
+    return cycle.member_cycle
+
+
+@api.route('/members/cycles/<int:id>/', methods=['GET'])
+@json
+def get_member_cycle(id):
+    return MemberCycle.query.get_or_404(id)
+
+
+@api.route('/cycles/<int:id>/share-out/', methods=['GET'])
+@json
+def get_cycle_share_out(id):
+    cycle = SavingGroupCycle.query.get_or_404(id)
+    #return cycle.sg_share_out
+    return SavingGroupShareOut.query.filter_by(cycle_id=id).first()
+
+
