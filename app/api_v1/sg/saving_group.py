@@ -3,7 +3,7 @@ from .. import api
 from ... import db
 from ...models import SavingGroup, SavingGroupMember, SavingGroupWallet, \
     Project, Organization, SavingGroupCycle, SavingGroupFinDetails, \
-    SavingGroupFines, SavingGroupShares, and_, User
+    SavingGroupFines, SavingGroupShares, and_, User, MemberCycle
 from ...decorators import json, paginate, no_cache
 from sqlalchemy.exc import IntegrityError
 from ...errorhandlers import internal_server_error
@@ -105,11 +105,13 @@ def get_sg_members(id):
 def new_sg_member(id):
     saving_group = SavingGroup.query.get_or_404(id)
     cycle = SavingGroupCycle.current_cycle(id)
-    member = SavingGroupMember(saving_group=saving_group,
-                               sg_cycle=cycle)
+    member = SavingGroupMember(saving_group=saving_group)
     member.import_data(request.json)
     try:
         db.session.add(member)
+        db.session.commit()
+        member_cycle = MemberCycle(sg_cycle=cycle, sg_member=member)
+        db.session.add(member_cycle)
         db.session.commit()
         return {}, 201, {'Location': member.get_url()}
     except IntegrityError:
