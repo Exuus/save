@@ -14,7 +14,9 @@ def get_member_shares(id):
     member_savings = SgMemberContributions.sum_savings(member.id)
 
     return {
-        'shares': '{}'.format(sg_shares.calculate_shares(member_savings[0]))
+        'shares': '{}'.format(sg_shares.calculate_shares(member_savings[0],
+                                                         sg_shares.saving_group_id)),
+        'contributions': '{}'.format(member_savings[0])
     }
 
 
