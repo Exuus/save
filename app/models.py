@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from werkzeug.security import generate_password_hash, check_password_hash
 from itsdangerous import JSONWebSignatureSerializer as Serializer
 from flask import url_for, current_app
@@ -121,6 +121,7 @@ class User(db.Model):
             'type': self.type,
             'birth_date': self.birth_date,
             'gender': self.gender,
+            'age': self.calculate_age(),
             'education': self.education,
             'first_login': self.first_login,
             'id_number': self.id_number,
@@ -166,6 +167,32 @@ class User(db.Model):
         except:
             return None
         return User.query.get(data['id'])
+
+    @classmethod
+    def male(cls, sg_id):
+        return db.session.query(func.count(User.id).label('male')) \
+            .join(SavingGroupMember) \
+            .filter(User.id == SavingGroupMember.user_id) \
+            .filter(User.gender == 0) \
+            .join(SavingGroup) \
+            .filter(SavingGroup.id == SavingGroupMember.saving_group_id) \
+            .filter(SavingGroupMember.saving_group_id == sg_id) \
+            .all()[0]
+
+    @classmethod
+    def female(cls, sg_id):
+        return db.session.query(func.count(User.id).label('female')) \
+            .join(SavingGroupMember) \
+            .filter(User.id == SavingGroupMember.user_id) \
+            .filter(User.gender == 1) \
+            .join(SavingGroup)\
+            .filter(SavingGroup.id == SavingGroupMember.saving_group_id)\
+            .filter(SavingGroupMember.saving_group_id == sg_id) \
+            .all()[0]
+
+    def calculate_age(self):
+        today = date.today()
+        return today.year - self.birth_date.year - ((today.month, today.day) < (self.birth_date.month, self.birth_date.day))
 
 
 class UserFinDetails(db.Model):
@@ -239,7 +266,11 @@ class SavingGroup(db.Model):
             'fines_url': url_for('api.get_sg_current_fines', id=self.id, _external=True),
             'meetings_url': url_for('api.get_sg_meetings', id=self.id, _external=True),
             'organization_id': self.organization_id,
-            'project_url': url_for('api.get_project', id=self.project_id, _external=True)
+            'project_url': url_for('api.get_project', id=self.project_id, _external=True),
+            'male': User.male(self.id)[0],
+            'female': User.female(self.id)[0],
+            'current_saving': SavingGroup.current_saving(self.id)[0],
+            'cumulative_saving': SavingGroup.cumulative_saving(self.id)[0]
         }
 
     def import_data(self, data):
@@ -266,6 +297,36 @@ class SavingGroup(db.Model):
             .filter(SavingGroup.project_id == Project.id)\
             .filter(Project.id == project_id)\
             .group_by(User.name, User.id, SavingGroup.village_id, Project.name, Project.id)
+
+    @classmethod
+    def current_saving(cls, sg_id):
+        cycle = SavingGroupCycle.current_cycle(sg_id)
+        return db.session.query(func.sum(SgMemberContributions.amount).label('saving'))\
+            .filter(SgMemberContributions.type == 1)\
+            .join(SavingGroupMember)\
+            .filter(SavingGroupMember.id == SgMemberContributions.sg_member_id)\
+            .join(SavingGroup)\
+            .filter(SavingGroup.id == SavingGroupMember.saving_group_id)\
+            .filter(SavingGroup.id == sg_id)\
+            .join(SavingGroupCycle)\
+            .filter(SavingGroupCycle.saving_group_id == SavingGroup.id)\
+            .filter(SavingGroupCycle.id == cycle.id) \
+            .filter(SavingGroupCycle.id == SgMemberContributions.sg_cycle_id)\
+            .first()
+
+    @classmethod
+    def cumulative_saving(cls, sg_id):
+        return db.session.query(func.sum(SgMemberContributions.amount).label('saving')) \
+            .filter(SgMemberContributions.type == 1) \
+            .join(SavingGroupMember) \
+            .filter(SavingGroupMember.id == SgMemberContributions.sg_member_id) \
+            .join(SavingGroup) \
+            .filter(SavingGroup.id == SavingGroupMember.saving_group_id) \
+            .filter(SavingGroup.id == sg_id) \
+            .join(SavingGroupCycle) \
+            .filter(SavingGroupCycle.saving_group_id == SavingGroup.id) \
+            .filter(SavingGroupCycle.id == SgMemberContributions.sg_cycle_id)\
+            .first()
 
 
 class SavingGroupWallet(db.Model):
@@ -325,6 +386,7 @@ class SavingGroupShareOut(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     shared_amount = db.Column(db.Float)
     reinvested_amount = db.Column(db.Float)
+    create_at = db.Column(db.DateTime, default=datetime.utcnow())
     cycle_id = db.Column(db.Integer, db.ForeignKey('sg_cycle.id'), index=True)
 
     def get_url(self):
@@ -335,6 +397,7 @@ class SavingGroupShareOut(db.Model):
             'id': self.id,
             'shared_amount': self.shared_amount,
             'reinvested_amount': self.reinvested_amount,
+            'create_at': self.create_at,
             'cycle_id': self.cycle_id
         }
 
@@ -917,8 +980,8 @@ class SavingGroupCycle(db.Model):
     sg_fines = db.relationship('SavingGroupFines', backref='sg_cycle', lazy='dynamic')
     sg_shares = db.relationship('SavingGroupShares', backref='sg_cycle', lazy='dynamic')
     sg_meeting = db.relationship('SavingGroupMeeting', backref='sg_cycle', lazy='dynamic')
-    sg_member = db.relationship('SavingGroupMember', backref='sg_cycle', lazy='dynamic')
     share_out = db.relationship('SavingGroupShareOut', backref='sg_cycle', lazy='dynamic')
+    member_cycle = db.relationship('MemberCycle', backref='sg_cycle', lazy='dynamic')
     db.Index('unique_cycle', start, end, saving_group_id, unique=True)
 
     def get_url(self):
@@ -937,9 +1000,8 @@ class SavingGroupCycle(db.Model):
             'social_fund_debit_url': url_for('api.get_cycle_social_fund_debit', id=self.id, _external=True),
             'social_fund_credit_url': url_for('api.get_cycle_social_fund_credit', id=self.id, _external=True),
             'savings_url': url_for('api.get_cycle_savings', id=self.id, _external=True),
-            'members_url': url_for('api.get_cycles_members', id=self.id, _external=True)
-
-
+            'members_url': url_for('api.get_cycles_members', id=self.id, _external=True),
+            'cycle_share_out_url': url_for('api.get_cycle_share_out', id=self.id, _external=True)
         }
 
     def import_data(self, data):
@@ -950,11 +1012,33 @@ class SavingGroupCycle(db.Model):
             raise ValidationError('Invalid Cycle ' + e.args[0])
         return self
 
+    def deactivate(self):
+        self.active = 0
+
     @classmethod
     def current_cycle(cls, saving_group_id):
         return SavingGroupCycle.query.\
             filter(and_(SavingGroupCycle.active == 1,
                         SavingGroupCycle.saving_group_id == saving_group_id)).first()
+
+
+class MemberCycle(db.Model):
+    __tablename__ = 'member_cycle'
+    id = db.Column(db.Integer, primary_key=True)
+    member_id = db.Column(db.Integer, db.ForeignKey('sg_member.id'), index=True)
+    cycle_id = db.Column(db.Integer, db.ForeignKey('sg_cycle.id'), index=True)
+    create_at = db.Column(db.DateTime, default=datetime.utcnow())
+
+    def get_url(self):
+        return url_for('api.get_member_cycle', id=self.id, _external=True)
+
+    def export_data(self):
+        return {
+            'self_url': self.get_url(),
+            'member_url': url_for('api.get_sg_member', id=self.member_id, _external=True),
+            'cycle_url': url_for('api.get_cycle', id=self.cycle_id, _external=True),
+            'create_at': self.create_at
+        }
 
 
 class SavingGroupMember(db.Model):
@@ -966,7 +1050,6 @@ class SavingGroupMember(db.Model):
     date = db.Column(db.DateTime, default=datetime.utcnow())
     admin = db.Column(db.Integer)  # 1 Admin # 0 Normal Member
     activate = db.Column(db.Integer, default=1)  # 1 Activate | 0 Removed
-    sg_cycle_id = db.Column(db.Integer, db.ForeignKey('sg_cycle.id'), index=True)
 
     member_loan = db.relationship('MemberLoan', backref='sg_member', lazy='dynamic')
     approved_loan = db.relationship('MemberApprovedLoan', backref='sg_member', lazy='dynamic')
@@ -977,6 +1060,7 @@ class SavingGroupMember(db.Model):
     member_mini_statement = db.relationship('MemberMiniStatement', backref='sg_member', lazy='dynamic')
     meeting_attendance = db.relationship('MeetingAttendance', backref='sg_member', lazy='dynamic')
     member_drop_out = db.relationship('SavingGroupDropOut', backref='sg_member', lazy='dynamic')
+    member_cycle = db.relationship('MemberCycle', backref='sg_member', lazy='dynamic')
 
     db.Index('member_sg_index', saving_group_id, user_id, unique=True)
 
