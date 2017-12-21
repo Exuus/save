@@ -693,7 +693,7 @@ class MemberLoan(db.Model):
         fine_rate = interest/self.initial_date_repayment
 
         if (datetime.now() > repayment_date) & (self.date_payment is None):
-            days = (datetime.now() - repayment_date).days
+            days = (arrow.utcnow() - arrow.get(repayment_date)).days + 1
             fine = days * fine_rate
             return {
                 'amount': fine,
