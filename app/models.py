@@ -192,7 +192,10 @@ class User(db.Model):
 
     def calculate_age(self):
         today = date.today()
-        return today.year - self.birth_date.year - ((today.month, today.day) < (self.birth_date.month, self.birth_date.day))
+        try:
+            return today.year - self.birth_date.year - ((today.month, today.day) < (self.birth_date.month, self.birth_date.day))
+        except AttributeError:
+            return 0
 
 
 class UserFinDetails(db.Model):
@@ -269,8 +272,12 @@ class SavingGroup(db.Model):
             'project_url': url_for('api.get_project', id=self.project_id, _external=True),
             'male': User.male(self.id)[0],
             'female': User.female(self.id)[0],
-            'current_saving': SavingGroup.current_saving(self.id)[0],
-            'cumulative_saving': SavingGroup.cumulative_saving(self.id)[0]
+            'current_saving': SavingGroup.current_saving(self.id),
+            'cumulative_saving': SavingGroup.cumulative_saving(self.id),
+            'count_write_off': SavingGroup.count_write_off(self.id),
+            'count_outstanding_loan': SavingGroup.count_outstanding_loan(self.id),
+            'social_fund_balance': SavingGroup.social_fund_balance(self.id),
+            'cumulative_dividend': SavingGroup.cumulative_dividend(self.id)
         }
 
     def import_data(self, data):
@@ -312,7 +319,7 @@ class SavingGroup(db.Model):
             .filter(SavingGroupCycle.saving_group_id == SavingGroup.id)\
             .filter(SavingGroupCycle.id == cycle.id) \
             .filter(SavingGroupCycle.id == SgMemberContributions.sg_cycle_id)\
-            .first()
+            .first()[0]
 
     @classmethod
     def cumulative_saving(cls, sg_id):
@@ -326,7 +333,51 @@ class SavingGroup(db.Model):
             .join(SavingGroupCycle) \
             .filter(SavingGroupCycle.saving_group_id == SavingGroup.id) \
             .filter(SavingGroupCycle.id == SgMemberContributions.sg_cycle_id)\
-            .first()
+            .first()[0]
+
+    @classmethod
+    def count_write_off(cls, sg_id):
+        return db.session.query(func.count(MemberLoan.id))\
+            .filter(MemberLoan.payment_type == 0)\
+            .join(SavingGroupMember).filter(SavingGroupMember.id == MemberLoan.sg_member_id)\
+            .join(SavingGroup)\
+            .filter(SavingGroup.id == SavingGroupMember.saving_group_id)\
+            .filter(SavingGroup.id == sg_id)\
+            .first()[0]
+
+    @classmethod
+    def count_outstanding_loan(cls, sg_id):
+        return db.session.query(func.count(MemberLoan.id)) \
+            .filter(MemberLoan.payment_type == 2) \
+            .join(SavingGroupMember).filter(SavingGroupMember.id == MemberLoan.sg_member_id) \
+            .join(SavingGroup) \
+            .filter(SavingGroup.id == SavingGroupMember.saving_group_id) \
+            .filter(SavingGroup.id == sg_id) \
+            .first()[0]
+
+    @classmethod
+    def social_fund_balance(cls, sg_id):
+        return db.session.query(func.sum(SgMemberContributions.amount).label('social_fund')) \
+            .filter(SgMemberContributions.type == 2) \
+            .join(SavingGroupMember) \
+            .filter(SavingGroupMember.id == SgMemberContributions.sg_member_id) \
+            .join(SavingGroup) \
+            .filter(SavingGroup.id == SavingGroupMember.saving_group_id) \
+            .filter(SavingGroup.id == sg_id) \
+            .join(SavingGroupCycle) \
+            .filter(SavingGroupCycle.saving_group_id == SavingGroup.id) \
+            .filter(SavingGroupCycle.id == SgMemberContributions.sg_cycle_id) \
+            .first()[0]
+
+    @classmethod
+    def cumulative_dividend(cls, sg_id):
+        return db.session.query(func.sum(SavingGroupShareOut.shared_amount).label('amount'))\
+            .join(SavingGroupCycle)\
+            .filter(SavingGroupCycle.id == SavingGroupShareOut.cycle_id)\
+            .join(SavingGroup)\
+            .filter(SavingGroup.id == SavingGroupCycle.saving_group_id)\
+            .filter(SavingGroup.id == sg_id)\
+            .first()[0]
 
 
 class SavingGroupWallet(db.Model):
@@ -409,6 +460,14 @@ class SavingGroupShareOut(db.Model):
             raise ValidationError('Invalid SG Share Out ' + e.args[0])
         return self
 
+    @classmethod
+    def per_cycle(cls, cycle_id):
+        return db.session.query(func.sum(SavingGroupShareOut.shared_amount))\
+            .join(SavingGroupCycle)\
+            .filter(SavingGroupShareOut.cycle_id == SavingGroupCycle.id)\
+            .filter(SavingGroupCycle.id == cycle_id)\
+            .first()[0]
+
 
 class SgMemberContributions(db.Model):
     __tablename__ = 'sg_member_contributions'
@@ -417,6 +476,8 @@ class SgMemberContributions(db.Model):
     operator = db.Column(db.Integer)  # 1 MTN # 2 TIGO # 3 AIRTEL
     type = db.Column(db.Integer)  # 1 Saving # 2 Social Fund
     date = db.Column(db.DateTime, default=datetime.utcnow())
+    external_transaction_id = db.Column(db.String(30), unique=True)
+    operator_transaction_id = db.Column(db.String(30), unique=True)
     sg_cycle_id = db.Column(db.Integer, db.ForeignKey('sg_cycle.id'), index=True)
     sg_member_id = db.Column(db.Integer, db.ForeignKey('sg_member.id'), index=True)
     sg_wallet_id = db.Column(db.Integer, db.ForeignKey('sg_wallet.id'), index=True)
@@ -439,9 +500,11 @@ class SgMemberContributions(db.Model):
 
     def import_data(self, data):
         try:
-            self.amount = data['amount'],
-            self.operator = data['operator'],
+            self.amount = data['amount']
+            self.operator = data['operator']
             self.type = data['type']
+            # self.external_transaction_id = data['external_transaction_id']
+            # self.operator_transaction_id = data['operator_transaction_id']
         except KeyError as e:
             raise ValidationError('Invalid SgMemberContributions ' + e.args[0])
         return self
@@ -503,8 +566,10 @@ class MemberLoan(db.Model):
     interest_rate = db.Column(db.Integer)
     initial_date_repayment = db.Column(db.Integer)
     date_payment = db.Column(db.DateTime)
-    payment_type = db.Column(db.Integer)  # 0 Write-off | 1 Self-payed
+    payment_type = db.Column(db.Integer)  # 0 Write-off | 1 Self-payed | 2 not payed
     write_off_admin = db.Column(db.Integer)
+    external_transaction_id = db.Column(db.String(30), unique=True)
+    operator_transaction_id = db.Column(db.String(30), unique=True)
     sg_cycle_id = db.Column(db.Integer, db.ForeignKey('sg_cycle.id'), index=True)
     sg_member_id = db.Column(db.Integer, db.ForeignKey('sg_member.id'), index=True)
     sg_wallet_id = db.Column(db.Integer, db.ForeignKey('sg_wallet.id'), index=True)
@@ -532,8 +597,14 @@ class MemberLoan(db.Model):
             self.amount_loaned = data['amount_loaned'],
             self.interest_rate = data['interest_rate'],
             self.initial_date_repayment = data['initial_date_repayment']
+
         except KeyError as e:
             raise ValidationError('Invalid sg_debit_loan' + e.args[0])
+        return self
+
+    def update_transaction_id(self, data):
+        self.operator_transaction_id = data['operator_transaction_id']
+        self.external_transaction_id = data['external_transaction_id']
         return self
 
     def date_repayment(self):
@@ -544,6 +615,9 @@ class MemberLoan(db.Model):
         self.date_payment = datetime.utcnow()
         self.payment_type = 0
         self.write_off_admin = admin_id
+
+    def not_payed(self):
+        self.payment_type = 2
 
     @classmethod
     def get_loan_balance(cls, loan):
@@ -727,6 +801,10 @@ class MemberApprovedLoan(db.Model):
         self.status_date = datetime.utcnow()
         return self
 
+    def pending_loan(self):
+        self.status = 2
+        return self
+
     @classmethod
     def get_approved_loan(cls, loan_id):
         return db.session.query(func.count(MemberApprovedLoan.id)). \
@@ -739,6 +817,8 @@ class MemberSocialFund(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     amount = db.Column(db.Float)
     date = db.Column(db.DateTime, default=datetime.utcnow())
+    external_transaction_id = db.Column(db.String(30), unique=True)
+    operator_transaction_id = db.Column(db.String(30), unique=True)
     sg_cycle_id = db.Column(db.Integer, db.ForeignKey('sg_cycle.id'), index=True)
     sg_member_id = db.Column(db.Integer, db.ForeignKey('sg_member.id'), index=True)
     sg_wallet_id = db.Column(db.Integer, db.ForeignKey('sg_wallet.id'), index=True)
@@ -756,6 +836,8 @@ class MemberSocialFund(db.Model):
             'sg_cycle_id': self.sg_cycle_id,
             'sg_member_id': self.sg_member_id,
             'sg_wallet_id': self.sg_wallet_id,
+            'external_transaction_id': self.external_transaction_id,
+            'operator_transaction_id': self.operator_transaction_id,
             'member_url': url_for('api.get_sg_member', id=self.sg_member_id, _external=True)
         }
 
@@ -765,6 +847,14 @@ class MemberSocialFund(db.Model):
         except KeyError as e:
             ValidationError('Invalid Social Debit' + e.args[0])
         return self
+
+    def update_transaction_id(self, data):
+        self.operator_transaction_id = data['operator_transaction_id']
+        self.external_transaction_id = data['external_transaction_id']
+        return self
+
+    def social_amount(self):
+        return self.amount
 
 
 class MemberApprovedSocial(db.Model):
@@ -805,6 +895,10 @@ class MemberApprovedSocial(db.Model):
     def decline_social(self):
         self.status = 0
         self.status_date = datetime.utcnow()
+        return self
+
+    def pending_social(self):
+        self.status = 2
         return self
 
     @classmethod
@@ -860,7 +954,13 @@ class SavingGroupShares(db.Model):
             .filter(SavingGroup.id == SavingGroupShares.saving_group_id)\
             .filter(SavingGroup.id == sg_id).first()[0]
 
+        saving = 0 if saving is None else saving
         return round(saving/shares, 1)
+        # try:
+        #     share = round(saving/shares, 1)
+        # except TypeError:
+        #     share = 0
+        # return share
 
 
 class SavingGroupFines(db.Model):
@@ -972,6 +1072,7 @@ class SavingGroupCycle(db.Model):
     start = db.Column(db.Date)
     end = db.Column(db.Date)
     active = db.Column(db.Integer, default=1)  # 1 active cycle | 0 not actif cycle
+    create_at = db.Column(db.DateTime, default=datetime.utcnow())
     saving_group_id = db.Column(db.Integer, db.ForeignKey('saving_group.id'), index=True)
     drop_out = db.relationship('SavingGroupDropOut', backref='sg_cycle', lazy='dynamic')
     contributions = db.relationship('SgMemberContributions', backref='sg_cycle', lazy='dynamic')
@@ -993,15 +1094,19 @@ class SavingGroupCycle(db.Model):
             'start': self.start,
             'end': self.end,
             'active': self.active,
+            'create_at': self.create_at,
             'cycle_length': monthdelta(self.start, self.end),
             'self_url': self.get_url(),
+            'saving': SavingGroupCycle.group_saving(self.id),
+            'loan': SavingGroupCycle.group_loan(self.id),
             'sg_url': url_for('api.get_sg', id=self.saving_group_id, _external=True),
             'loan_url': url_for('api.get_cycle_loan', id=self.id, _external=True),
             'social_fund_debit_url': url_for('api.get_cycle_social_fund_debit', id=self.id, _external=True),
             'social_fund_credit_url': url_for('api.get_cycle_social_fund_credit', id=self.id, _external=True),
             'savings_url': url_for('api.get_cycle_savings', id=self.id, _external=True),
             'members_url': url_for('api.get_cycles_members', id=self.id, _external=True),
-            'cycle_share_out_url': url_for('api.get_cycle_share_out', id=self.id, _external=True)
+            'cycle_share_out_url': url_for('api.get_cycle_share_out', id=self.id, _external=True),
+            'share_out_per_cycle': SavingGroupShareOut.per_cycle(self.id)
         }
 
     def import_data(self, data):
@@ -1020,6 +1125,27 @@ class SavingGroupCycle(db.Model):
         return SavingGroupCycle.query.\
             filter(and_(SavingGroupCycle.active == 1,
                         SavingGroupCycle.saving_group_id == saving_group_id)).first()
+
+    @classmethod
+    def group_saving(cls, cycle_id):
+        return db.session.query(func.sum(SgMemberContributions.amount).label('saving')) \
+            .filter(SgMemberContributions.type == 1) \
+            .join(SavingGroupMember) \
+            .filter(SavingGroupMember.id == SgMemberContributions.sg_member_id) \
+            .join(SavingGroupCycle) \
+            .filter(SavingGroupCycle.id == SgMemberContributions.sg_cycle_id) \
+            .filter(SavingGroupCycle.id == cycle_id) \
+            .first()[0]
+
+    @classmethod
+    def group_loan(cls, cycle_id):
+        return db.session.query(func.sum(MemberLoan.amount_loaned).label('loan'))\
+            .join(SavingGroupMember)\
+            .filter(SavingGroupMember.id == MemberLoan.sg_member_id)\
+            .join(SavingGroupCycle)\
+            .filter(MemberLoan.sg_cycle_id == SavingGroupCycle.id)\
+            .filter(SavingGroupCycle.id == cycle_id)\
+            .first()[0]
 
 
 class MemberCycle(db.Model):
@@ -1343,7 +1469,8 @@ class ProjectAgent(db.Model):
     def export_data(self):
         return {
             'date': self.date,
-            'users': self.users.export_data()
+            'users': self.users.export_data(),
+            'project': self.project.export_data()
         }
 
     def import_data(self, data):
