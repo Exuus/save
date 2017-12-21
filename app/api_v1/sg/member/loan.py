@@ -137,15 +137,29 @@ def approve_loan(member_id, id):
                 if admins == loan_approved:
                     approval = 1
                     if amount_loaned > wallet_balance:
-                        return {'status': 'not enough found'}, 200
+                        approved_loan.pending_loan()
+                        db.session.add(approved_loan)
+                        db.session.commit()
+                        return {'status': 'not enough found'}, 404
+                    loan.not_payed()
                     wallet.debit_wallet(amount_loaned)
+                    db.session.add(loan)
                     db.session.add(wallet)
                     db.session.commit()
-
                 return {}, 200, {'Loan-Approval': approval}
         except AttributeError:
             return {}, 404
-    return {}, 404
+    return {'status': 'Wrong PIN'}, 404
+
+
+@api.route('/loan/<int:id>/transactions-id/', methods=['PUT'])
+@json
+def put_loan_transaction_id(id):
+    loan = MemberLoan.query.get_or_404(id)
+    loan.update_transaction_id()
+    db.session.add(loan)
+    db.session.commit()
+    return {}, 200
 
 
 @api.route('/member/admin/<int:member_id>/decline/loan/<int:id>/', methods=['PUT'])
