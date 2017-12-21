@@ -6,6 +6,7 @@ from ...models import SavingGroupCycle, SavingGroup, MemberSocialFund, \
     SavingGroupShareOut
 from ...decorators import json, paginate, no_cache
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import desc, asc
 
 
 @api.route('/cycles/<int:id>/', methods=['GET'])
@@ -20,7 +21,7 @@ def get_cycle(id):
 @paginate('cycles')
 def get_sg_cycle(id):
     saving_group = SavingGroup.query.get_or_404(id)
-    return saving_group.sg_cycle
+    return saving_group.sg_cycle.order_by(asc(SavingGroupCycle.start))
 
 
 @api.route('/sg/<int:id>/cycles/', methods=['POST'])
