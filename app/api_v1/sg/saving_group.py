@@ -107,15 +107,11 @@ def new_sg_member(id):
     cycle = SavingGroupCycle.current_cycle(id)
     member = SavingGroupMember(saving_group=saving_group)
     member.import_data(request.json)
-    try:
-        db.session.add(member)
-        db.session.commit()
-        member_cycle = MemberCycle(sg_cycle=cycle, sg_member=member)
-        db.session.add(member_cycle)
-        db.session.commit()
-        return {}, 201, {'Location': member.get_url()}
-    except IntegrityError:
-        return internal_server_error()
+    member_cycle = MemberCycle(sg_cycle=cycle, sg_member=member)
+    db.session.add(member)
+    db.session.add(member_cycle)
+    db.session.commit()
+    return {}, 201, {'Location': member.get_url()}
 
 
 @api.route('/sg/<int:id>/fines/', methods=['POST'])
