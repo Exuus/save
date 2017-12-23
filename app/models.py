@@ -503,8 +503,8 @@ class SgMemberContributions(db.Model):
             self.amount = data['amount']
             self.operator = data['operator']
             self.type = data['type']
-            # self.external_transaction_id = data['external_transaction_id']
-            # self.operator_transaction_id = data['operator_transaction_id']
+            self.external_transaction_id = data['external_transaction_id']
+            self.operator_transaction_id = data['operator_transaction_id']
         except KeyError as e:
             raise ValidationError('Invalid SgMemberContributions ' + e.args[0])
         return self
@@ -733,6 +733,8 @@ class MemberLoanRepayment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     amount = db.Column(db.Float)
     date = db.Column(db.DateTime, default=datetime.utcnow())
+    external_transaction_id = db.Column(db.String(30), unique=True)
+    operator_transaction_id = db.Column(db.String(30), unique=True)
     loan_id = db.Column(db.Integer, db.ForeignKey('member_loan.id'), index=True)
 
     def get_url(self):
@@ -749,6 +751,8 @@ class MemberLoanRepayment(db.Model):
     def import_data(self, data):
         try:
             self.amount = data['amount']
+            self.external_transaction_id = data['external_transaction_id']
+            self.operator_transaction_id = data['operator_transaction_id']
         except KeyError as e:
             raise ValidationError('Invalid Member Loan Repay' + e.args)
         return self
