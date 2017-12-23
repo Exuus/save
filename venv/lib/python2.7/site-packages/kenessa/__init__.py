@@ -67,6 +67,11 @@ class Kenessa:
         self.c.execute("SELECT Village.id FROM Village WHERE Village.id = ?", [village])
         id_village = self.c.fetchall()
 
+        if village is None:
+            k = ['cell', 'district', 'sector', 'province']
+            output = dict.fromkeys(k)
+            return output
+
         # Village
         village = dict()
         village['id'] = str(list(id_village[0])[0])
