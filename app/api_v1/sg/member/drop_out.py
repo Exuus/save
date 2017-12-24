@@ -16,21 +16,23 @@ def get_member_drop(id):
 @json
 def drop_out(id):
     member = SavingGroupMember.query.get_or_404(id)
+    admins = SavingGroupMember.group_admin(member.saving_group_id)
     if member.verify_pin(request.json['pin']):
         cycle = SavingGroupCycle.current_cycle(member.saving_group_id)
-        loan = MemberLoan.query \
-            .filter_by(sg_member_id=member.id) \
-            .order_by(MemberLoan.date_payment.desc()) \
-            .first()
-        loan = MemberLoan.get_loan_balance(loan)
-        if loan['status'] == 'payed':
-            drop = SavingGroupDropOut(sg_member=member,
-                                      sg_cycle=cycle)
-            member.drop_out()
-            db.session.add(drop)
-            db.session.add(member)
-            db.session.commit()
+
+        try:
+            loan = MemberLoan.query \
+                .filter_by(sg_member_id=member.id) \
+                .order_by(MemberLoan.date_payment.desc()) \
+                .first()
+            loan = MemberLoan.get_loan_balance(loan)
+            if loan['status'] == 'payed':
+                SavingGroupDropOut.post_drop_out(member, cycle, admins)
+                return {}, 201
+        except AttributeError:
+            SavingGroupDropOut.post_drop_out(member, cycle, admins)
             return {}, 201
+
     return {}, 404
 
 
