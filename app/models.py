@@ -1301,6 +1301,7 @@ class SavingGroupDropOut(db.Model):
     member_id = db.Column(db.Integer, db.ForeignKey('sg_member.id'), index=True)
     sg_cycle_id = db.Column(db.Integer, db.ForeignKey('sg_cycle.id'), index=True)
     drop_out = db.relationship('DropOutApproved', backref='sg_drop_out', lazy='dynamic')
+    db.Index('drop_out_cycle', sg_cycle_id, member_id, unique=True)
 
     def get_url(self):
         return url_for('api.get_member_drop', id=self.id, _external=True)
@@ -1369,6 +1370,17 @@ class DropOutApproved(db.Model):
         except KeyError as e:
             raise ValidationError('Invalid Drop out approved ' + e.args[0])
         return self
+
+    def approve_drop_out(self):
+        self.status = 1
+        self.status_at = datetime.utcnow()
+        return self
+
+    @classmethod
+    def get_approved_drop_out(cls, drop_out_id):
+        return db.session.query(func.count(DropOutApproved.id)). \
+            filter(and_(DropOutApproved.drop_out_id == drop_out_id,
+                        DropOutApproved.status == 1)).first()
 
 
 class SavingGroupFinDetails(db.Model):
