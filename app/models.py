@@ -1191,6 +1191,7 @@ class SavingGroupMember(db.Model):
     meeting_attendance = db.relationship('MeetingAttendance', backref='sg_member', lazy='dynamic')
     member_drop_out = db.relationship('SavingGroupDropOut', backref='sg_member', lazy='dynamic')
     member_cycle = db.relationship('MemberCycle', backref='sg_member', lazy='dynamic')
+    admin_drop_out_approved = db.relationship('DropOutApproved', backref='sg_member', lazy='dynamic')
 
     db.Index('member_sg_index', saving_group_id, user_id, unique=True)
 
@@ -1299,6 +1300,7 @@ class SavingGroupDropOut(db.Model):
     date = db.Column(db.DateTime, default=datetime.utcnow())
     member_id = db.Column(db.Integer, db.ForeignKey('sg_member.id'), index=True)
     sg_cycle_id = db.Column(db.Integer, db.ForeignKey('sg_cycle.id'), index=True)
+    drop_out = db.relationship('DropOutApproved', backref='sg_drop_out', lazy='dynamic')
 
     def get_url(self):
         return url_for('api.get_member_drop', id=self.id, _external=True)
@@ -1316,6 +1318,56 @@ class SavingGroupDropOut(db.Model):
             pass
         except KeyError as e:
             raise ValidationError('invalid Drop dout ' + e.args[0])
+        return self
+
+    @classmethod
+    def post_drop_out(cls, member, cycle, admins):
+        drop = SavingGroupDropOut(sg_member=member,
+                                  sg_cycle=cycle)
+        member.drop_out()
+        db.session.add(member)
+        db.session.add(drop)
+        db.session.commit()
+
+        """ add member approve Request """
+
+        for admin in admins:
+            data = dict()
+            data['status'] = 2
+            data['admin_id'] = admin.export_data()['id']
+            approved_drop = DropOutApproved(sg_drop_out=drop)
+            approved_drop.import_data(data)
+            db.session.add(approved_drop)
+            db.session.commit()
+        return cls
+
+
+class DropOutApproved(db.Model):
+    __tablename__ = 'drop_out_approved'
+    id = db.Column(db.Integer, primary_key=True)
+    status = db.Column(db.Integer)  # 1 Approved | 2 Pending | 0 Canceled
+    create_at = db.Column(db.DateTime, default=datetime.utcnow())
+    status_at = db.Column(db.DateTime)
+    admin_id = db.Column(db.Integer, db.ForeignKey('sg_member.id'), index=True)
+    drop_out_id = db.Column(db.Integer, db.ForeignKey('sg_drop_out.id'), index=True)
+
+    def get_url(self):
+        return url_for('api.get_drop_out_approved', id=self.id, _external=True)
+
+    def export_data(self):
+        return {
+            'id': self.id,
+            'create_at': self.create_at,
+            'admin_id': self.admin_id,
+            'drop_out_id': self.drop_out_id
+        }
+
+    def import_data(self, data):
+        try:
+            self.status = data['status']
+            self.admin_id = data['admin_id']
+        except KeyError as e:
+            raise ValidationError('Invalid Drop out approved ' + e.args[0])
         return self
 
 
