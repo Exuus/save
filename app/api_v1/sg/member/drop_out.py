@@ -2,7 +2,7 @@ from flask import request
 from ... import api
 from .... import db
 from ....models import SavingGroupCycle, SavingGroupMember, \
-    SavingGroupDropOut, MemberLoan, SavingGroup
+    SavingGroupDropOut, MemberLoan, SavingGroup, and_, DropOutApproved
 from ....decorators import json, paginate, no_cache
 
 
@@ -10,6 +10,12 @@ from ....decorators import json, paginate, no_cache
 @json
 def get_member_drop(id):
     return SavingGroupDropOut.query.get_or_404(id)
+
+
+@api.route('/drop-out/approved/<int:id>/', methods=['GET'])
+@json
+def get_drop_out_approved(id):
+    return DropOutApproved.query.get_or_404(id)
 
 
 @api.route('/members/<int:id>/drop-out/', methods=['POST'])
@@ -34,6 +40,47 @@ def drop_out(id):
             return {}, 201
 
     return {}, 404
+
+
+@api.route('/members/admin/<int:id>/drop-out/pending/', methods=['GET'])
+@no_cache
+@json
+@paginate('pending_drop_out')
+def get_pending_drop_out(id):
+    member = SavingGroupMember.query.\
+        filter(and_(SavingGroupMember.admin == 1, SavingGroupMember.id == id)).\
+        first()
+
+    if member:
+        return member.admin_drop_out_approved.filter_by(status=2)
+    return {}, 404
+
+
+@api.route('/members/admin/<int:member_id>/approve/drop-out/<int:id>/', methods=['PUT'])
+@json
+def approve_drop_out(member_id, id):
+    member = SavingGroupMember.query.\
+        filter(and_(SavingGroupMember.admin == 1, SavingGroupMember.id == member_id)).\
+        first()
+
+    if member:
+
+        if member.verify_pin(request.json['pin']):
+            approved_drop_out = DropOutApproved.query.get_or_404(id)
+            approved_drop_out.approve_drop_out()
+            db.session.add(approved_drop_out)
+            db.session.commit()
+
+            admins = SavingGroupMember.count_group_admin(member.saving_group_id)[0]
+            drop_out_approved = DropOutApproved.get_approved_drop_out(approved_drop_out.drop_out_id)[0]
+            approval = 0
+            if admins == drop_out_approved:
+                approval = 1
+            return {}, 200, {'Drop-Out-Approval': approval}
+
+        # except AttributeError:
+        #     return {}, 404
+    return {'status': 'Wrong PIN'}, 404
 
 
 @api.route('/sg/<int:id>/drop-out/', methods=['GET'])
