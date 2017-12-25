@@ -816,6 +816,37 @@ class MemberApprovedLoan(db.Model):
                         MemberApprovedLoan.status == 1)).first()
 
 
+class MemberWriteOff(db.Model):
+    __tablename__ = 'member_write_off'
+    id = db.Column(db.Integer, primary_key=True)
+    status = db.Column(db.Integer)  # 1 Approved | 2 Pending | 3 Canceled
+    status_at = db.Column(db.DateTime)
+    create_at = db.Column(db.DateTime, default=datetime.utcnow())
+    admin_id = db.Column(db.Integer, db.ForeignKey('sg_member.id'), index=True)
+    loan_id = db.Column(db.Integer, db.ForeignKey('member_loan.id'), index=True)
+
+    def get_url(self):
+        return url_for('api.get_member_write_off', id=self.id, _external=True)
+
+    def export_data(self):
+        return {
+            'id': self.id,
+            'status': self.status,
+            'status_at': self.status_at,
+            'create_at': self.create_at,
+            'admin_id': self.admin_id,
+            'loan_id': self.loan_id
+        }
+
+    def import_data(self, data):
+        try:
+            self.status = data['status']
+            self.admin_id = data['admin_id']
+        except KeyError as e:
+            raise ValidationError('Invalid sg write off '+ e.args)
+        return self
+
+
 class MemberSocialFund(db.Model):
     __tablename__ = 'member_social_fund'
     id = db.Column(db.Integer, primary_key=True)
