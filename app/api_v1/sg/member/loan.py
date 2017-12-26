@@ -2,7 +2,7 @@ from flask import request
 from ... import api
 from .... import db
 from ....models import SavingGroupCycle, SavingGroupMember, and_, SavingGroupWallet, \
-    MemberLoan, MemberApprovedLoan, MemberLoanRepayment
+    MemberLoan, MemberApprovedLoan, MemberLoanRepayment, MemberWriteOff
 from ....decorators import json, paginate, no_cache
 
 
@@ -215,14 +215,41 @@ def new_loan_repayment(id):
 @json
 def update_write_off(id):
     admin = SavingGroupMember.query.get_or_404(request.json['admin_id'])
+    admins = SavingGroupMember.group_admin(admin.saving_group_id)
     if admin.verify_pin(request.json['pin']):
-        loan = MemberLoan.query.get_or_404(id)
+        loan = MemberLoan.query \
+            .filter_by(id=id) \
+            .order_by(MemberLoan.date_payment.desc()) \
+            .first()
         if MemberLoan.get_loan_balance(loan)['status'] == 'not payed':
+            MemberWriteOff.post_write_off(admins, loan)
+
             loan.write_off(request.json['admin_id'])
             db.session.add(loan)
             db.session.commit()
             return {}, 200
     return {}, 404
+
+
+@api.route('/members/admin/<int:member_id>/approve/write-off/<int:id>/', methods=['PUT'])
+def approve_write_off(member_id, id):
+    member = SavingGroupMember.query.filter_by(id=member_id, admin=1).first()
+    if member:
+        if member.verify_pin(request.json['pin']):
+            approved_write_off = MemberWriteOff.query.get_or_404(id)
+            approved_write_off.approve_write_off()
+
+            admins = SavingGroupMember.count_group_admin(member.saving_group_id)
+            write_off_approved = MemberWriteOff.get_approved(approved_write_off.loan_id)
+            approval = 0
+            if admins == write_off_approved:
+                approval = 1
+                loan = MemberLoan.query.get_or_404(approved_write_off.loan_id)
+                loan.write_off(request.json['admin_id'])
+                db.session.add(loan)
+                db.session.commit()
+            return {}, 200 , {'Write-Off-Approval': approval}
+    return {'status': 'Wrong PIN'}, 404
 
 
 @api.route('/loan/<int:id>/balance/', methods=['GET'])
