@@ -846,6 +846,30 @@ class MemberWriteOff(db.Model):
             raise ValidationError('Invalid sg write off '+ e.args)
         return self
 
+    @classmethod
+    def post_write_off(cls, admins, loan):
+
+        for admin in admins:
+            data = dict()
+            data['status'] = 2
+            data['admin_id'] = admin.export_data()['id']
+            approved_write_off = MemberWriteOff(member_loan=loan)
+            approved_write_off.import_data(data)
+            db.session.add(approved_write_off)
+            db.session.commit()
+        return cls
+
+    def approve_write_off(self):
+        self.status = 1
+        self.status_at = datetime.utcnow()
+        return self
+
+    @classmethod
+    def get_approved(cls, loan_id):
+        return db.session.query(func.count(MemberWriteOff.id)). \
+            filter(and_(MemberWriteOff.loan_id == loan_id,
+                        MemberWriteOff.status == 1)).first()
+
 
 class MemberSocialFund(db.Model):
     __tablename__ = 'member_social_fund'
