@@ -686,7 +686,7 @@ class MemberLoan(db.Model):
     interest_rate = db.Column(db.Integer)
     initial_date_repayment = db.Column(db.Integer)
     date_payment = db.Column(db.DateTime)
-    payment_type = db.Column(db.Integer)  # 0 Write-off | 1 Self-payed | 2 not payed
+    payment_type = db.Column(db.Integer)  # 0 Write-off | 1 Self-payed | 2 not payed | 3 Decline
     write_off_admin = db.Column(db.Integer)
     external_transaction_id = db.Column(db.String(30), unique=True)
     operator_transaction_id = db.Column(db.String(30), unique=True)
@@ -716,8 +716,8 @@ class MemberLoan(db.Model):
 
     def import_data(self, data):
         try:
-            self.amount_loaned = data['amount_loaned'],
-            self.interest_rate = data['interest_rate'],
+            self.amount_loaned = data['amount_loaned']
+            self.interest_rate = data['interest_rate']
             self.initial_date_repayment = data['initial_date_repayment']
 
         except KeyError as e:
@@ -740,6 +740,9 @@ class MemberLoan(db.Model):
 
     def not_payed(self):
         self.payment_type = 2
+
+    def declined(self):
+        self.payment_type = 3
 
     @classmethod
     def get_loan_balance(cls, loan):
@@ -772,6 +775,8 @@ class MemberLoan(db.Model):
     def get_payment_status(self, remain):
         if self.payment_type == 0:
             return 'payed'
+        if self.payment_type == 3:
+            return 'decline'
         elif remain == 0:
             return 'payed'
         return 'not payed'
@@ -1642,7 +1647,11 @@ class SavingGroupMeeting(db.Model):
             'self_url': self.get_url(),
             'theme': self.theme,
             'id': self.id,
-            'meeting_date': self.meeting_date
+            'bank_balance': self.bank_balance,
+            'external_debt': self.external_debt,
+            'property_at_cycle_start': self.property_at_cycle_start,
+            'meeting_date': self.meeting_date,
+            'attendee_url': url_for('api.get_meeting_attendee', id=self.id, _external=True)
         }
 
     def import_data(self, data):
