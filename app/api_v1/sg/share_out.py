@@ -91,6 +91,18 @@ def update_share_out_done(id):
     return {}, 200
 
 
+@api.route('/members/<int:id>/share-out/', methods=['POST'])
+@json
+def new_members_share_out(id):
+    member = SavingGroupMember.query.get_or_404(id)
+    share_out = MemberShareOut.query.get_or_404(request.json['share_out_id'])
+    member_share_out = MemberShareOut(sg_member=member, sg_share_out=share_out)
+    member_share_out.import_data(request.json)
+    db.session.add(member_share_out)
+    db.session.commit()
+    return {}, 201
+
+
 @api.route('/members/admin/<int:member_id>/decline/share-out/<int:id>/', methods=['PUT'])
 @json
 def decline_share_out(member_id, id):
@@ -110,7 +122,7 @@ def decline_share_out(member_id, id):
     return {'status': 'Wrong PIN'}, 404
 
 
-@api.route('/members/share-out/<in:id>/', methods=['GET'])
+@api.route('/members/share-out/<int:id>/', methods=['GET'])
 @json
 def get_member_share_out(id):
     return MemberShareOut.query.get_or_404(id)
