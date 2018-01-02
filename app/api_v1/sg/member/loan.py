@@ -36,20 +36,20 @@ def get_member_approve_loan(id):
     member = SavingGroupMember.query.get_or_404(id)
     cycle = SavingGroupCycle.current_cycle(member.saving_group_id)
     if member:
-        return MemberLoan.query\
-            .join(MemberApprovedLoan, SavingGroupCycle)\
-            .filter(MemberLoan.sg_member_id == member.id)\
-            .filter(MemberLoan.id == MemberApprovedLoan.loan_id)\
-            .filter(MemberLoan.sg_cycle_id == SavingGroupCycle.id)\
-            .filter(SavingGroupCycle.id == cycle.id)\
-            .filter(MemberApprovedLoan.status == 1)
         # return MemberLoan.query\
+        #     .join(MemberApprovedLoan, SavingGroupCycle)\
         #     .filter(MemberLoan.sg_member_id == member.id)\
-        #     .join(SavingGroupCycle)\
-        #     .filter(SavingGroupCycle.saving_group_id == member.saving_group_id)\
-        #     .join(MemberApprovedLoan)\
-        #     .filter(MemberApprovedLoan.status == 1)\
-        #     .filter(MemberLoan.id == MemberApprovedLoan.loan_id)
+        #     .filter(MemberLoan.id == MemberApprovedLoan.loan_id)\
+        #     .filter(MemberLoan.sg_cycle_id == SavingGroupCycle.id)\
+        #     .filter(SavingGroupCycle.id == cycle.id)\
+        #     .filter(MemberApprovedLoan.status == 1)
+        return MemberLoan.query\
+            .filter(MemberLoan.sg_member_id == member.id)\
+            .join(SavingGroupCycle)\
+            .filter(SavingGroupCycle.saving_group_id == member.saving_group_id)\
+            .join(MemberApprovedLoan)\
+            .filter(MemberApprovedLoan.status == 1)\
+            .filter(MemberLoan.id == MemberApprovedLoan.loan_id)
     return {}, 404,
 
 
@@ -102,7 +102,7 @@ def new_loan_request(id):
         .first()
     if loan:
         loan = MemberLoan.get_loan_balance(loan)
-        if loan['status'] == 'payed':
+        if loan['status'] == 'payed' or loan['status'] == 'decline':
             if member:
                 if len(admins.all()):
                     if member.verify_pin(request.json['pin']):
@@ -122,36 +122,33 @@ def approve_loan(member_id, id):
         filter(and_(SavingGroupMember.admin == 1, SavingGroupMember.id == member_id)).\
         first()
     if member:
-        try:
-            if member.verify_pin(request.json['pin']):
+        if member.verify_pin(request.json['pin']):
 
-                approved_loan = MemberApprovedLoan.query.get_or_404(id)
-                approved_loan.approve_loan()
-                db.session.add(approved_loan)
-                db.session.commit()
+            approved_loan = MemberApprovedLoan.query.get_or_404(id)
+            approved_loan.approve_loan()
+            db.session.add(approved_loan)
+            db.session.commit()
 
-                admins = SavingGroupMember.count_group_admin(member.saving_group_id)[0]
-                loan_approved = MemberApprovedLoan.get_approved_loan(approved_loan.loan_id)[0]
-                wallet = SavingGroupWallet.wallet(member.saving_group_id)
-                wallet_balance = wallet.balance()
-                loan = MemberLoan.query.get_or_404(approved_loan.loan_id)
-                amount_loaned = MemberLoan.get_loan_balance(loan)['amount_loaned']
-                approval = 0
-                if admins == loan_approved:
-                    approval = 1
-                    if amount_loaned > wallet_balance:
-                        approved_loan.pending_loan()
-                        db.session.add(approved_loan)
-                        db.session.commit()
-                        return {'status': 'not enough found'}, 404
-                    loan.not_payed()
-                    wallet.debit_wallet(amount_loaned)
-                    db.session.add(loan)
-                    db.session.add(wallet)
+            admins = SavingGroupMember.count_group_admin(member.saving_group_id)[0]
+            loan_approved = MemberApprovedLoan.get_approved_loan(approved_loan.loan_id)[0]
+            wallet = SavingGroupWallet.wallet(member.saving_group_id)
+            wallet_balance = wallet.balance()
+            loan = MemberLoan.query.get_or_404(approved_loan.loan_id)
+            amount_loaned = MemberLoan.get_loan_balance(loan)['amount_loaned']
+            approval = 0
+            if admins == loan_approved:
+                approval = 1
+                if amount_loaned > wallet_balance:
+                    approved_loan.pending_loan()
+                    db.session.add(approved_loan)
                     db.session.commit()
-                return {}, 200, {'Loan-Approval': approval}
-        except AttributeError:
-            return {}, 404
+                    return {'status': 'not enough found'}, 404
+                loan.not_payed()
+                wallet.debit_wallet(amount_loaned)
+                db.session.add(loan)
+                db.session.add(wallet)
+                db.session.commit()
+            return {}, 200, {'Loan-Approval': approval}
     return {'status': 'Wrong PIN'}, 404
 
 
@@ -175,8 +172,11 @@ def decline_loan(member_id, id):
         try:
             if member.verify_pin(request.json['pin']):
                 approved_loan = MemberApprovedLoan.query.get_or_404(id)
+                loan = MemberLoan.query.get_or_404(approve_loan.loan_id)
+                loan.declined()
                 approved_loan.decline_loan()
                 db.session.add(approved_loan)
+                db.session.add(loan)
                 db.session.commit()
                 return {}, 200
         except AttributeError:
@@ -265,10 +265,10 @@ def approve_write_off(member_id, id):
             if admins == write_off_approved:
                 approval = 1
                 loan = MemberLoan.query.get_or_404(approved_write_off.loan_id)
-                loan.write_off(request.json['member_id'])
+                loan.write_off(member_id)
                 db.session.add(loan)
                 db.session.commit()
-            return {}, 200 , {'Write-Off-Approval': approval}
+            return {}, 200, {'Write-Off-Approval': approval}
     return {'status': 'Wrong PIN'}, 404
 
 
