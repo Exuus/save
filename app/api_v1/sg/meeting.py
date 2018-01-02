@@ -32,7 +32,7 @@ def new_sg_meetings(id):
     db.session.add(meeting)
     db.session.commit()
 
-    return {}, 200, {'Location': meeting.get_url()}
+    return meeting
 
 
 @api.route('/attendees/<int:id>/')
