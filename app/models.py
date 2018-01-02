@@ -437,6 +437,7 @@ class SavingGroupShareOut(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     shared_amount = db.Column(db.Float)
     reinvested_amount = db.Column(db.Float)
+    status = db.Column(db.Integer, default=2)  # 2 Pending | 1 Done
     initiator_id = db.Column(db.Integer, db.ForeignKey('sg_member.id'), index=True)
     create_at = db.Column(db.DateTime, default=datetime.utcnow())
     cycle_id = db.Column(db.Integer, db.ForeignKey('sg_cycle.id'), index=True)
@@ -477,6 +478,9 @@ class SavingGroupShareOut(db.Model):
             .filter(SavingGroupCycle.id == cycle_id)\
             .first()[0]
 
+    def share_out_done(self):
+        self.status = 1
+
     @classmethod
     def post_share_out(cls, cycle, data, admins, admin_id):
         share_out = SavingGroupShareOut(sg_cycle=cycle)
@@ -513,17 +517,17 @@ class SavingGroupShareOut(db.Model):
         db.session.commit()
 
         # Update Cycle
-        cycle.deactivate()
-        db.session.add(cycle)
-        db.session.commit()
-        cycle = SavingGroupCycle(saving_group=sg)
-        json = dict()
-        today = date.today()
-        json['start'] = today.strftime('%Y-%m-%d')
-        json['end'] = date(today.year + 1, today.month, today.day).strftime('%Y-%m-%d')
-        cycle.import_data(json)
-        db.session.add(cycle)
-        db.session.commit()
+        # cycle.deactivate()
+        # db.session.add(cycle)
+        # db.session.commit()
+        # cycle = SavingGroupCycle(saving_group=sg)
+        # json = dict()
+        # today = date.today()
+        # json['start'] = today.strftime('%Y-%m-%d')
+        # json['end'] = date(today.year + 1, today.month, today.day).strftime('%Y-%m-%d')
+        # cycle.import_data(json)
+        # db.session.add(cycle)
+        # db.session.commit()
 
         data = list()
         shares = 0
@@ -533,7 +537,7 @@ class SavingGroupShareOut(db.Model):
             json['member_id'] = saving[1]
             json['share'] = SavingGroupShares.calculate_shares(saving[0], sg.id)
             json['percentage_share'] = (json['saving'] / total_savings) * 100
-            json['share_out_amount'] = (json['percentage_share'] * float(share_out['shared_amount'])) / 100
+            json['share_out_amount'] = int((json['percentage_share'] * float(share_out['shared_amount'])) / 100)
             shares += json['share']
             data.append(json)
         return data
