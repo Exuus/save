@@ -76,16 +76,19 @@ def get_admin_pending_loan(id):
 @json
 def get_member_loan(id):
     member = SavingGroupMember.query.get_or_404(id)
-    loan = MemberLoan.query\
-        .filter_by(sg_member_id=member.id)\
-        .order_by(MemberLoan.date_payment.desc())\
-        .first()
-    status = MemberLoan.loan_status(loan.id, member.saving_group_id)
-    loan = MemberLoan.get_loan_balance(loan)
-    if not status:
-        loan['status'] = 'pending'
+    try:
+        loan = MemberLoan.query\
+            .filter_by(sg_member_id=member.id)\
+            .order_by(MemberLoan.date_payment.desc())\
+            .first()
+        status = MemberLoan.loan_status(loan.id, member.saving_group_id)
+        loan = MemberLoan.get_loan_balance(loan)
+        if not status:
+            loan['status'] = 'pending'
+            return loan
         return loan
-    return loan
+    except AttributeError:
+        return {}, 404
 
 
 @api.route('/member/<int:id>/loan/', methods=['POST'])
@@ -231,13 +234,30 @@ def update_write_off(id):
     return {}, 404
 
 
+@api.route('/write-off/<int:id>/', methods=['GET'])
+@json
+def get_member_write_off(id):
+    return MemberWriteOff.query.get_or_404(id)
+
+
+@api.route('/members/admin/<int:id>/pending/write-off/', methods=['GET'])
+@json
+@paginate('member_write_off')
+def get_pending_write_off(id):
+    member = SavingGroupMember.query.filter_by(id=id, admin=1).first()
+    return member.member_write_off.filter_by(status=2)
+
+
 @api.route('/members/admin/<int:member_id>/approve/write-off/<int:id>/', methods=['PUT'])
+@json
 def approve_write_off(member_id, id):
     member = SavingGroupMember.query.filter_by(id=member_id, admin=1).first()
     if member:
         if member.verify_pin(request.json['pin']):
             approved_write_off = MemberWriteOff.query.get_or_404(id)
             approved_write_off.approve_write_off()
+            db.session.add(approved_write_off)
+            db.session.commit()
 
             admins = SavingGroupMember.count_group_admin(member.saving_group_id)
             write_off_approved = MemberWriteOff.get_approved(approved_write_off.loan_id)
@@ -245,9 +265,22 @@ def approve_write_off(member_id, id):
             if admins == write_off_approved:
                 approval = 1
                 loan = MemberLoan.query.get_or_404(approved_write_off.loan_id)
-                loan.write_off(request.json['admin_id'])
+                loan.write_off(request.json['member_id'])
                 db.session.add(loan)
                 db.session.commit()
+            return {}, 200 , {'Write-Off-Approval': approval}
+    return {'status': 'Wrong PIN'}, 404
+
+
+@api.route('/members/admin/<int:member_id>/decline/write-off/<int:id>/', methods=['PUT'])
+@json
+def decline_write_off(member_id, id):
+    member = SavingGroupMember.query.filter_by(id=member_id, admin=1).first()
+    if member:
+        if member.verify_pin(request.json['pin']):
+            declined_write_off = MemberWriteOff.query.get_or_404(id)
+            declined_write_off.decline_write_off()
+            approval = 0
             return {}, 200 , {'Write-Off-Approval': approval}
     return {'status': 'Wrong PIN'}, 404
 
