@@ -443,6 +443,7 @@ class SavingGroupShareOut(db.Model):
     cycle_id = db.Column(db.Integer, db.ForeignKey('sg_cycle.id'), index=True)
 
     approved_share_out = db.relationship('ApprovedShareOut', backref='sg_share_out', lazy='dynamic')
+    member_share_out = db.relationship('MemberShareOut', backref='sg_share_out', lazy='dynamic')
 
     def get_url(self):
         return url_for('api.get_share_out', id=self.id, _external=True)
@@ -541,6 +542,42 @@ class SavingGroupShareOut(db.Model):
             shares += json['share']
             data.append(json)
         return data
+
+
+class MemberShareOut(db.Model):
+    __tablename__ = 'member_share_out'
+    id = db.Column(db.Integer, primary_key=True)
+    amount = db.Column(db.Float)
+    external_transaction_id = db.Column(db.String(30), unique=True)
+    operator_transaction_id = db.Column(db.String(30), unique=True)
+    create_at = db.Column(db.DateTime, default=datetime.utcnow())
+    member_id = db.Column(db.Integer, db.ForeignKey('sg_member.id'), index=True)
+    share_out_id = db.Column(db.Integer, db.ForeignKey('sg_share_out.id'), index=True)
+
+    def get_url(self):
+        return url_for('api.get_member_share_out', id=self.id, _external=True)
+
+    def export_data(self):
+        return {
+            'id': self.id,
+            'amount': self.amount,
+            'external_transaction_id': self.external_transaction_id,
+            'operator_transaction_id': self.operator_transaction_id,
+            'create_at': self.create_at,
+            'member_id': self.member_id,
+            'share_out_id': self.share_out_id,
+            'member': self.sg_member.export_data(),
+            'share_out': self.share_out.export_data()
+        }
+
+    def import_data(self, data):
+        try:
+            self.amount = data['amount']
+            self.external_transaction_id = data['external_transaction_id']
+            self.operator_transaction_id = data['operator_transaction_id']
+        except KeyError as e:
+            ValidationError('Invalid sg approved Share out' + e.args[0])
+        return self
 
 
 class ApprovedShareOut(db.Model):
