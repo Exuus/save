@@ -83,6 +83,28 @@ def approve_drop_out(member_id, id):
     return {'status': 'Wrong PIN'}, 404
 
 
+@api.route('/members/admin/<int:member_id>/decline/drop-out/<int:id>/', methods=['PUT'])
+@json
+def decline_drop_out(member_id, id):
+    member = SavingGroupMember.query.\
+        filter(and_(SavingGroupMember.admin == 1, SavingGroupMember.id == member_id)).\
+        first()
+
+    if member:
+
+        if member.verify_pin(request.json['pin']):
+            declined_drop_out = DropOutApproved.query.get_or_404(id)
+            declined_drop_out.decline_drop_out()
+            db.session.add(declined_drop_out)
+            db.session.commit()
+            approval = 0
+            return {}, 200, {'Drop-Out-Approval': approval}
+
+        # except AttributeError:
+        #     return {}, 404
+    return {'status': 'Wrong PIN'}, 404
+
+
 @api.route('/sg/<int:id>/drop-out/', methods=['GET'])
 @no_cache
 @json
