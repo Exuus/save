@@ -1315,7 +1315,6 @@ class MemberFineRepayment(db.Model):
         return url_for('api.get_member_fine_repayment', id=self.id, _external=True)
 
 
-
 class SavingGroupCycle(db.Model):
     __tablename__ = 'sg_cycle'
     id = db.Column(db.Integer, primary_key=True)
@@ -1441,6 +1440,7 @@ class SavingGroupMember(db.Model):
     member_write_off = db.relationship('MemberWriteOff', backref='sg_member', lazy='dynamic')
     approved_share_out = db.relationship('ApprovedShareOut', backref='sg_member', lazy='dynamic')
     sg_share_out = db.relationship('SavingGroupShareOut', backref='sg_member', lazy='dynamic')
+    member_share_out = db.relationship('MemberShareOut', backref='sg_member', lazy='dynamic')
 
     db.Index('member_sg_index', saving_group_id, user_id, unique=True)
 
