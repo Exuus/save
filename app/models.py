@@ -437,8 +437,11 @@ class SavingGroupShareOut(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     shared_amount = db.Column(db.Float)
     reinvested_amount = db.Column(db.Float)
+    initiator_id = db.Column(db.Integer, db.ForeignKey('sg_member.id'), index=True)
     create_at = db.Column(db.DateTime, default=datetime.utcnow())
     cycle_id = db.Column(db.Integer, db.ForeignKey('sg_cycle.id'), index=True)
+
+    approved_share_out = db.relationship('ApprovedShareOut', backref='sg_share_out', lazy='dynamic')
 
     def get_url(self):
         return url_for('api.get_share_out', id=self.id, _external=True)
@@ -449,13 +452,16 @@ class SavingGroupShareOut(db.Model):
             'shared_amount': self.shared_amount,
             'reinvested_amount': self.reinvested_amount,
             'create_at': self.create_at,
-            'cycle_id': self.cycle_id
+            'cycle_id': self.cycle_id,
+            'initiator_id': self.initiator_id,
+            'initiator': self.sg_member.export_data()
         }
 
     def import_data(self, data):
         try:
             self.shared_amount = data['shared_amount']
             self.reinvested_amount = data['reinvested_amount']
+            self.initiator_id = data['initiator_id']
         except KeyError as e:
             raise ValidationError('Invalid SG Share Out ' + e.args[0])
         return self
@@ -467,6 +473,120 @@ class SavingGroupShareOut(db.Model):
             .filter(SavingGroupShareOut.cycle_id == SavingGroupCycle.id)\
             .filter(SavingGroupCycle.id == cycle_id)\
             .first()[0]
+
+    @classmethod
+    def post_share_out(cls, cycle, data, admins, admin_id):
+        share_out = SavingGroupShareOut(sg_cycle=cycle)
+        data['initiator_id'] = admin_id
+        share_out.import_data(data)
+        db.session.add(share_out)
+        db.session.commit()
+
+        """ add member approve Request """
+
+        for admin in admins:
+            data = dict()
+            data['status'] = 2
+            data['admin_id'] = admin.export_data()['id']
+            approved_loan = ApprovedShareOut(sg_share_out=share_out)
+            approved_loan.import_data(data)
+            db.session.add(approved_loan)
+            db.session.commit()
+        return cls
+
+    @classmethod
+    def share_out(cls, sg_id, shared_amount):
+        sg = SavingGroup.query.get_or_404(sg_id)
+        savings = SgMemberContributions.member_savings(sg_id)
+        total_savings = SgMemberContributions.total_savings(sg_id)
+        cycle = SavingGroupCycle.current_cycle(sg.id)
+
+        # Update SG Share out and Wallet
+        wallet = SavingGroupWallet.wallet(sg_id)
+        share_out = wallet.share_out(shared_amount)
+        wallet = SavingGroupWallet.wallet(sg.id)
+        wallet.debit_wallet(shared_amount)
+        db.session.add(wallet)
+        db.session.commit()
+
+        # Update Cycle
+        cycle.deactivate()
+        db.session.add(cycle)
+        db.session.commit()
+        cycle = SavingGroupCycle(saving_group=sg)
+        json = dict()
+        today = date.today()
+        json['start'] = today.strftime('%Y-%m-%d')
+        json['end'] = date(today.year + 1, today.month, today.day).strftime('%Y-%m-%d')
+        cycle.import_data(json)
+        db.session.add(cycle)
+        db.session.commit()
+
+        data = list()
+        shares = 0
+        for saving in savings:
+            json = dict()
+            json['saving'] = saving[0]
+            json['member_id'] = saving[1]
+            json['share'] = SavingGroupShares.calculate_shares(saving[0], sg.id)
+            json['percentage_share'] = (json['saving'] / total_savings) * 100
+            json['share_out_amount'] = (json['percentage_share'] * float(share_out['shared_amount'])) / 100
+            shares += json['share']
+            data.append(json)
+        return data
+
+
+class ApprovedShareOut(db.Model):
+    __tablename__ = 'approved_share_out'
+    id = db.Column(db.Integer, primary_key=True)
+    status = db.Column(db.Integer)
+    status_at = db.Column(db.DateTime)
+    create_at = db.Column(db.DateTime, default=datetime.utcnow())
+    admin_id = db.Column(db.Integer, db.ForeignKey('sg_member.id'), index=True)
+    share_out_id = db.Column(db.Integer, db.ForeignKey('sg_share_out.id'), index=True)
+
+    def get_url(self):
+        return url_for('api.get_approved_share_out', id=self.id, _external=True)
+
+    def export_data(self):
+        return {
+            'id': self.id,
+            'status': self.status,
+            'status_at': self.status_at,
+            'create_at': self.create_at,
+            'admin_id': self.admin_id,
+            'share_out_id': self.share_out_id,
+            'share_out': self.sg_share_out.export_data(),
+            'self_url': self.get_url()
+        }
+
+    def import_data(self, data):
+        try:
+            self.status = data['status']
+            self.admin_id = data['admin_id']
+        except KeyError as e:
+            ValidationError('Invalid sg approved Share out' + e.args[0])
+        return self
+
+    def approve_share_out(self):
+        self.status = 1
+        self.status_at = datetime.utcnow()
+        return self
+
+    def decline_share_out(self):
+        self.status = 0
+        self.status_at = datetime.utcnow()
+        return self
+
+    def pending_share_out(self):
+        self.status = 2
+        return self
+
+    @classmethod
+    def get_approved_share_out(cls, share_out_id):
+        return db.session.query(func.count(ApprovedShareOut.id)). \
+            filter(and_(ApprovedShareOut.share_out_id == share_out_id,
+                        ApprovedShareOut.status == 1)).first()
 
 
 class SgMemberContributions(db.Model):
@@ -576,6 +696,7 @@ class MemberLoan(db.Model):
 
     approved = db.relationship('MemberApprovedLoan', backref='member_loan',  lazy='dynamic')
     loan_repayment = db.relationship('MemberLoanRepayment', backref='member_loan', lazy='dynamic')
+    member_write_off = db.relationship('MemberWriteOff', backref='member_loan', lazy='dynamic')
 
     def get_url(self):
         return url_for('api.get_loan', id=self.id, _external=True)
@@ -589,7 +710,8 @@ class MemberLoan(db.Model):
             'date_repayment': self.initial_date_repayment,
             'request_date': self.request_date,
             'expect_date_repayment': self.request_date + timedelta(days=self.initial_date_repayment),
-            'sg_member_url': url_for('api.get_sg_member', id=self.sg_member_id, _external=True)
+            'sg_member_url': url_for('api.get_sg_member', id=self.sg_member_id, _external=True),
+            'member': self.sg_member.export_data()
         }
 
     def import_data(self, data):
@@ -835,7 +957,8 @@ class MemberWriteOff(db.Model):
             'status_at': self.status_at,
             'create_at': self.create_at,
             'admin_id': self.admin_id,
-            'loan_id': self.loan_id
+            'loan_id': self.loan_id,
+            'loan': self.member_loan.export_data()
         }
 
     def import_data(self, data):
@@ -843,7 +966,7 @@ class MemberWriteOff(db.Model):
             self.status = data['status']
             self.admin_id = data['admin_id']
         except KeyError as e:
-            raise ValidationError('Invalid sg write off '+ e.args)
+            raise ValidationError('Invalid sg write off ' + e.args)
         return self
 
     @classmethod
@@ -861,6 +984,11 @@ class MemberWriteOff(db.Model):
 
     def approve_write_off(self):
         self.status = 1
+        self.status_at = datetime.utcnow()
+        return self
+
+    def decline_write_off(self):
+        self.status = 0
         self.status_at = datetime.utcnow()
         return self
 
@@ -1125,6 +1253,20 @@ class MemberFine(db.Model):
             .group_by(SavingGroupFines.name, SavingGroupFines.acronym).all()
 
 
+class MemberFineRepayment(db.Model):
+    __tablename__ = 'member_fine_repayment'
+    id = db.Column(db.Integer, primary_key=True)
+    amount = db.Column(db.Float)
+    date = db.Column(db.DateTime, default=datetime.utcnow())
+    external_transaction_id = db.Column(db.String(30), unique=True)
+    operator_transaction_id = db.Column(db.String(30), unique=True)
+    loan_id = db.Column(db.Integer, db.ForeignKey('member_loan.id'), index=True)
+
+    def get_url(self):
+        return url_for('api.get_member_fine_repayment', id=self.id, _external=True)
+
+
+
 class SavingGroupCycle(db.Model):
     __tablename__ = 'sg_cycle'
     id = db.Column(db.Integer, primary_key=True)
@@ -1247,6 +1389,9 @@ class SavingGroupMember(db.Model):
     member_drop_out = db.relationship('SavingGroupDropOut', backref='sg_member', lazy='dynamic')
     member_cycle = db.relationship('MemberCycle', backref='sg_member', lazy='dynamic')
     admin_drop_out_approved = db.relationship('DropOutApproved', backref='sg_member', lazy='dynamic')
+    member_write_off = db.relationship('MemberWriteOff', backref='sg_member', lazy='dynamic')
+    approved_share_out = db.relationship('ApprovedShareOut', backref='sg_member', lazy='dynamic')
+    sg_share_out = db.relationship('SavingGroupShareOut', backref='sg_member', lazy='dynamic')
 
     db.Index('member_sg_index', saving_group_id, user_id, unique=True)
 
@@ -1366,6 +1511,7 @@ class SavingGroupDropOut(db.Model):
             'id': self.id,
             'date': self.date,
             'member_id': self.member_id,
+            'member': self.sg_member.export_data(),
             'cycle_id': self.sg_cycle_id
         }
 
@@ -1415,7 +1561,8 @@ class DropOutApproved(db.Model):
             'id': self.id,
             'create_at': self.create_at,
             'admin_id': self.admin_id,
-            'drop_out_id': self.drop_out_id
+            'drop_out_id': self.drop_out_id,
+            'drop_out': self.sg_drop_out.export_data()
         }
 
     def import_data(self, data):
@@ -1428,6 +1575,11 @@ class DropOutApproved(db.Model):
 
     def approve_drop_out(self):
         self.status = 1
+        self.status_at = datetime.utcnow()
+        return self
+
+    def decline_drop_out(self):
+        self.status = 0
         self.status_at = datetime.utcnow()
         return self
 
