@@ -741,6 +741,7 @@ class MemberLoan(db.Model):
     approved = db.relationship('MemberApprovedLoan', backref='member_loan',  lazy='dynamic')
     loan_repayment = db.relationship('MemberLoanRepayment', backref='member_loan', lazy='dynamic')
     member_write_off = db.relationship('MemberWriteOff', backref='member_loan', lazy='dynamic')
+    member_fine_repayment = db.relationship('MemberFineRepayment', backref='member_loan', lazy='dynamic')
 
     def get_url(self):
         return url_for('api.get_loan', id=self.id, _external=True)
