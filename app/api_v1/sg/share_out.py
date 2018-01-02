@@ -68,7 +68,7 @@ def approve_share_out(member_id, id):
             if share_out_approved == admins:
                 approval = 1
                 sg_share_out = SavingGroupShareOut.share_out(member.saving_group_id, share_out.shared_amount)
-            return {'share_out': sg_share_out}, 200, {'Share-Out-Approval': approval}
+            return sg_share_out, 200, {'Share-Out-Approval': approval}
 
     return {'status': 'Wrong PIN'}, 404
 
