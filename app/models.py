@@ -446,6 +446,9 @@ class SavingGroupShareOut(db.Model):
     def get_url(self):
         return url_for('api.get_share_out', id=self.id, _external=True)
 
+    def get_members_share_out(self):
+        return url_for('api.get_share_out_members', id=self.id, _external=True)
+
     def export_data(self):
         return {
             'id': self.id,
