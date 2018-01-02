@@ -27,8 +27,8 @@ def get_user(id):
 @json
 def get_users_members(phone):
     user = User.query.\
-        filter(User.phone == phone).\
-        filter_by(type=3).first()
+        filter(User.phone == phone)\
+        .first()
     if user:
         return SavingGroupMember.query.\
             filter(SavingGroupMember.user_id == user.id).first()
