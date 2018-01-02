@@ -11,12 +11,13 @@ def get_member_shares(id):
     cycle = SavingGroupCycle.current_cycle(member.saving_group.id)
     sg_shares = SavingGroupShares.query.\
         filter(SavingGroupShares.sg_cycle_id == cycle.id).first()
-    member_savings = SgMemberContributions.sum_savings(member.id)
+    member_savings = 0 if SgMemberContributions.sum_savings(member.id)[0] is None \
+        else SgMemberContributions.sum_savings(member.id)[0]
 
     return {
-        'shares': '{}'.format(sg_shares.calculate_shares(member_savings[0],
+        'shares': '{}'.format(sg_shares.calculate_shares(member_savings,
                                                          sg_shares.saving_group_id)),
-        'contributions': '{}'.format(member_savings[0])
+        'contributions': '{}'.format(member_savings)
     }
 
 
