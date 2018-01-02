@@ -2,10 +2,9 @@ from flask import request
 from .. import api
 from ... import db
 from ...models import SavingGroupShareOut, SavingGroupCycle, \
-    SavingGroup, SavingGroupWallet, SgMemberContributions, SavingGroupShares, \
+    SavingGroup, SavingGroupWallet, MemberShareOut, \
     SavingGroupMember, and_, ApprovedShareOut
 from ...decorators import json, paginate, no_cache
-from datetime import date
 
 
 @api.route('/share-out/<int:id>/', methods=['GET'])
@@ -109,6 +108,12 @@ def decline_share_out(member_id, id):
             return {}, 200, {'Share-Out-Approval': approval}
 
     return {'status': 'Wrong PIN'}, 404
+
+
+@api.route('/members/share-out/<in:id>/', methods=['GET'])
+@json
+def get_member_share_out(id):
+    return MemberShareOut.query.get_or_404(id)
 
 
 
