@@ -17,7 +17,16 @@ def get_fine(id):
 def get_member_fine(id):
     member = SavingGroupMember.query.get_or_404(id)
     cycle = SavingGroupCycle.current_cycle(member.saving_group_id)
-    return MemberFine.fixed_fine(member.id, cycle.id)
+    fines = MemberFine.fixed_fine(member.id, cycle.id)
+    data = list()
+    for fine in fines:
+        json = dict()
+        json['fine'] = fine[0]
+        json['name'] = fine[1]
+        json['acronym'] = fine[2]
+        data.append(json)
+
+    return data
 
 
 @api.route('/members/<int:id>/fines/<int:fine_id>/', methods=['POST'])
