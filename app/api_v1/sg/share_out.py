@@ -64,13 +64,32 @@ def approve_share_out(member_id, id):
             admins = SavingGroupMember.count_group_admin(member.saving_group_id)
 
             approval = 0
-            sg_share_out = None
             if share_out_approved == admins:
                 approval = 1
-                sg_share_out = SavingGroupShareOut.share_out(member.saving_group_id, share_out.shared_amount)
-            return sg_share_out, 200, {'Share-Out-Approval': approval}
+            return {}, 200, {
+                                'Share-Out-Approval': approval,
+                                'Location': share_out.get_members_share_out()
+                        }
 
     return {'status': 'Wrong PIN'}, 404
+
+
+@api.route('/share-out/<int:id>/members/', methods=['GET'])
+@json
+def get_share_out_members(id):
+    share_out = SavingGroupShareOut.query.get_or_404(id)
+    cycle = SavingGroupCycle.query.get_or_404(share_out.cycle_id)
+    return SavingGroupShareOut.share_out(cycle.saving_group_id, share_out.shared_amount)
+
+
+@api.route('/share-out/<int:id>/done/', methods=['put'])
+@json
+def update_share_out_done(id):
+    share_out = SavingGroupShareOut.query.get_or_404(id)
+    share_out.share_out_done()
+    db.session.add(share_out)
+    db.session.commit()
+    return {}, 200
 
 
 @api.route('/members/admin/<int:member_id>/decline/share-out/<int:id>/', methods=['PUT'])
