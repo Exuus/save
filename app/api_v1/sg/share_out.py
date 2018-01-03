@@ -67,7 +67,8 @@ def approve_share_out(member_id, id):
                 approval = 1
             return {}, 200, {
                                 'Share-Out-Approval': approval,
-                                'Location': share_out.get_members_share_out()
+                                'Location': share_out.get_members_share_out(),
+                                'id': id
                         }
 
     return {'status': 'Wrong PIN'}, 404
