@@ -156,7 +156,7 @@ def approve_loan(member_id, id):
 @json
 def put_loan_transaction_id(id):
     loan = MemberLoan.query.get_or_404(id)
-    loan.update_transaction_id()
+    loan.update_transaction_id(request.json)
     db.session.add(loan)
     db.session.commit()
     return {}, 200
