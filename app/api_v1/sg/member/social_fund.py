@@ -151,7 +151,7 @@ def approve_social(member_id, id):
 @json
 def put_social_fund_transaction_id(id):
     social_fund = MemberSocialFund.query.get_or_404(id)
-    social_fund.update_transaction_id()
+    social_fund.update_transaction_id(request.json)
     db.session.add(social_fund)
     db.session.commit()
     return {}, 200
