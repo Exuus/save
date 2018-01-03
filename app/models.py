@@ -548,6 +548,7 @@ class MemberShareOut(db.Model):
     __tablename__ = 'member_share_out'
     id = db.Column(db.Integer, primary_key=True)
     amount = db.Column(db.Float)
+    status = db.Column(db.Integer)  # 1 Done | 0 Failed
     external_transaction_id = db.Column(db.String(30), unique=True)
     operator_transaction_id = db.Column(db.String(30), unique=True)
     create_at = db.Column(db.DateTime, default=datetime.utcnow())
@@ -575,6 +576,7 @@ class MemberShareOut(db.Model):
             self.amount = data['amount']
             self.external_transaction_id = data['external_transaction_id']
             self.operator_transaction_id = data['operator_transaction_id']
+            self.status = data['status']
         except KeyError as e:
             ValidationError('Invalid sg approved Share out' + e.args[0])
         return self
