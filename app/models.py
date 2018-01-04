@@ -543,6 +543,35 @@ class SavingGroupShareOut(db.Model):
             data.append(json)
         return data
 
+    @classmethod
+    def member_share_out(cls, member):
+        sg = SavingGroup.query.get_or_404(member.saving_group_id)
+        saving = SgMemberContributions.member_saving(member)
+        total_savings = SgMemberContributions.total_savings(member.saving_group_id)
+
+        # Update SG Wallet
+        wallet = SavingGroupWallet.wallet(member.saving_group_id)
+        balance = wallet.balance()
+
+        json = dict()
+        try:
+            json['saving'] = saving[0]
+        except TypeError:
+            return False
+
+        json['member_id'] = member.id
+        json['share'] = SavingGroupShares.calculate_shares(json['saving'], sg.id)
+        json['percentage_share'] = (json['saving'] / total_savings) * 100
+        json['share_out_amount'] = int((json['percentage_share'] * balance) / 100)
+
+        member.drop_out()
+        db.session.add(member)
+        wallet.debit_wallet(json['share_out_amount'])
+        db.session.add(wallet)
+        db.session.commit()
+
+        return json
+
 
 class MemberShareOut(db.Model):
     __tablename__ = 'member_share_out'
@@ -722,6 +751,21 @@ class SgMemberContributions(db.Model):
             .filter(SavingGroupCycle.id == cycle.id) \
             .group_by(SgMemberContributions.sg_member_id)\
             .all()
+
+    @classmethod
+    def member_saving(cls, member):
+        cycle = SavingGroupCycle.current_cycle(member.saving_group_id)
+        return db.session \
+            .query(func.sum(SgMemberContributions.amount).label('saving'), SgMemberContributions.sg_member_id) \
+            .filter(SgMemberContributions.type == 1) \
+            .join(SavingGroupMember) \
+            .filter(SavingGroupMember.id == SgMemberContributions.sg_member_id) \
+            .filter(SgMemberContributions.sg_member_id == member.id) \
+            .filter(SavingGroupMember.activate == 1) \
+            .filter(SavingGroupCycle.id == SgMemberContributions.sg_cycle_id) \
+            .filter(SavingGroupCycle.id == cycle.id) \
+            .group_by(SgMemberContributions.sg_member_id) \
+            .first()
 
 
 class MemberLoan(db.Model):
@@ -1444,6 +1488,7 @@ class SavingGroupMember(db.Model):
     approved_share_out = db.relationship('ApprovedShareOut', backref='sg_member', lazy='dynamic')
     sg_share_out = db.relationship('SavingGroupShareOut', backref='sg_member', lazy='dynamic')
     member_share_out = db.relationship('MemberShareOut', backref='sg_member', lazy='dynamic')
+    drop_out_share_out = db.relationship('DropOutShareOut', backref='sg_member', lazy='dynamic')
 
     db.Index('member_sg_index', saving_group_id, user_id, unique=True)
 
@@ -1553,6 +1598,7 @@ class SavingGroupDropOut(db.Model):
     member_id = db.Column(db.Integer, db.ForeignKey('sg_member.id'), index=True)
     sg_cycle_id = db.Column(db.Integer, db.ForeignKey('sg_cycle.id'), index=True)
     drop_out = db.relationship('DropOutApproved', backref='sg_drop_out', lazy='dynamic')
+    drop_out_share_out = db.relationship('DropOutShareOut', backref='sg_drop_out', lazy='dynamic')
     db.Index('drop_out_cycle', sg_cycle_id, member_id, unique=True)
 
     def get_url(self):
@@ -1578,8 +1624,7 @@ class SavingGroupDropOut(db.Model):
     def post_drop_out(cls, member, cycle, admins):
         drop = SavingGroupDropOut(sg_member=member,
                                   sg_cycle=cycle)
-        member.drop_out()
-        db.session.add(member)
+
         db.session.add(drop)
         db.session.commit()
 
@@ -1594,6 +1639,41 @@ class SavingGroupDropOut(db.Model):
             db.session.add(approved_drop)
             db.session.commit()
         return cls
+
+
+class DropOutShareOut(db.Model):
+    __tablename__ = 'drop_out_share_out'
+    id = db.Column(db.Integer, primary_key=True)
+    amount = db.Column(db.Float)
+    status = db.Column(db.Integer)  # 1 Done | 0 Failed
+    external_transaction_id = db.Column(db.String(30), unique=True)
+    operator_transaction_id = db.Column(db.String(30), unique=True)
+    member_id = db.Column(db.Integer, db.ForeignKey('sg_member.id'), index=True)
+    drop_out_id = db.Column(db.Integer, db.ForeignKey('sg_drop_out.id'), index=True)
+
+    def get_url(self):
+        url_for('api.get_drop_out_share_out', id=self.id, _external=True)
+
+    def export_data(self):
+        return {
+            'id': self.id,
+            'amount': self.amount,
+            'status': self.status,
+            'external_transaction_id': self.external_transaction_id,
+            'operator_transaction_id': self.operator_transaction_id,
+            'member_id': self.member_id,
+            'drop_out_id': self.drop_out_id
+        }
+
+    def import_data(self, data):
+        try:
+            self.amount = data['amount']
+            self.status = data['status']
+            self.external_transaction_id = data['external_transaction_id']
+            self.operator_transaction_id = data['operator_transaction_id']
+        except KeyError as e:
+            raise ValidationError('Invalid Drop out approved ' + e.args[0])
+        return self
 
 
 class DropOutApproved(db.Model):
