@@ -1505,6 +1505,9 @@ class SavingGroupMember(db.Model):
     def get_url(self):
         return url_for('api.get_sg_member', id=self.id, _external=True)
 
+    def get_member_share_out(self):
+        return url_for('api.get_member_share_out_drop_out', id=self.id, _external=True)
+
     def export_data(self):
         return {
             'id': self.id,
