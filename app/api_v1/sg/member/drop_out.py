@@ -2,7 +2,8 @@ from flask import request
 from ... import api
 from .... import db
 from ....models import SavingGroupCycle, SavingGroupMember, \
-    SavingGroupDropOut, MemberLoan, SavingGroup, and_, DropOutApproved
+    SavingGroupDropOut, MemberLoan, SavingGroup, and_, DropOutApproved, \
+    SavingGroupShareOut, DropOutShareOut
 from ....decorators import json, paginate, no_cache
 
 
@@ -73,14 +74,29 @@ def approve_drop_out(member_id, id):
 
             admins = SavingGroupMember.count_group_admin(member.saving_group_id)[0]
             drop_out_approved = DropOutApproved.get_approved_drop_out(approved_drop_out.drop_out_id)[0]
+
             approval = 0
             if admins == drop_out_approved:
                 approval = 1
             return {}, 200, {'Drop-Out-Approval': approval}
 
+            # Remain headers Location for member share out
+            # drop out id to the headers
+
         # except AttributeError:
         #     return {}, 404
     return {'status': 'Wrong PIN'}, 404
+
+
+@api.route('/member/<int:id>/share-out/', methods=['GET'])
+@json
+def get_member_share_out_drop_out(id):
+    member = SavingGroupMember.query.get_or_404(id)
+    if member.activate == 1:
+        if SavingGroupShareOut.member_share_out(member) is False:
+            return {}, 404
+        return SavingGroupShareOut.member_share_out(member)
+    return {}, 404
 
 
 @api.route('/members/admin/<int:member_id>/decline/drop-out/<int:id>/', methods=['PUT'])
@@ -116,5 +132,22 @@ def get_sg_drop_out(id):
         .filter(SavingGroupMember.saving_group_id == SavingGroup.id)\
         .filter(SavingGroup.id == id)
 
+
+@api.route('/drop-out/share-out/<int:id>/', methods=['GET'])
+@json
+def get_drop_out_share_out(id):
+    return DropOutShareOut.query.get_or_404(id)
+
+
+@api.route('/member/<int:id>/drop-share-out/', methods=['POST'])
+@json
+def new_member_drop_share_out(id):
+    member = SavingGroupMember.query.get_or_404(id)
+    sg_drop_out = SavingGroupDropOut.query.get_or_404(request.json['drop_out_id'])
+    drop_share_out = DropOutShareOut(sg_member=member, sg_drop_out=sg_drop_out)
+    drop_share_out.import_data(request.json)
+    db.session.add(drop_share_out)
+    db.session.commit()
+    return {}, 201
 
 
