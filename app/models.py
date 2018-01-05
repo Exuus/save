@@ -787,7 +787,6 @@ class MemberLoan(db.Model):
     approved = db.relationship('MemberApprovedLoan', backref='member_loan',  lazy='dynamic')
     loan_repayment = db.relationship('MemberLoanRepayment', backref='member_loan', lazy='dynamic')
     member_write_off = db.relationship('MemberWriteOff', backref='member_loan', lazy='dynamic')
-    member_fine_repayment = db.relationship('MemberFineRepayment', backref='member_loan', lazy='dynamic')
 
     def get_url(self):
         return url_for('api.get_loan', id=self.id, _external=True)
@@ -1304,6 +1303,8 @@ class MemberFine(db.Model):
     wallet_id = db.Column(db.Integer, db.ForeignKey('sg_wallet.id'), index=True)
     sg_fine_id = db.Column(db.Integer, db.ForeignKey('sg_fines.id'), index=True)
 
+    member_fine_repayment = db.relationship('MemberFineRepayment', backref='member_fine', lazy='dynamic')
+
     def get_url(self):
         return url_for('api.get_fine', id=self.id, _external=True)
 
@@ -1339,27 +1340,58 @@ class MemberFine(db.Model):
     @classmethod
     def fixed_fine(cls, member_id, cycle_id):
         return db.session\
-            .query(func.sum(SavingGroupFines.fine).label('fines'), SavingGroupFines.name, SavingGroupFines.acronym)\
+            .query(func.sum(SavingGroupFines.fine).label('fines'), SavingGroupFines.name,
+                   SavingGroupFines.acronym, MemberFine.id, MemberFine.initialization_date,
+                   MemberFine.status)\
             .join(MemberFine, SavingGroupMember)\
             .filter(MemberFine.member_id == SavingGroupMember.id)\
+            .filter(MemberFine.status == 0)\
             .filter(SavingGroupFines.id == MemberFine.sg_fine_id)\
             .filter(SavingGroupMember.id == member_id)\
             .filter(SavingGroupFines.sg_cycle_id == cycle_id)\
             .filter(SavingGroupFines.acronym != 'LRF')\
-            .group_by(SavingGroupFines.name, SavingGroupFines.acronym).all()
+            .group_by(SavingGroupFines.name, SavingGroupFines.acronym,  MemberFine.id)\
+            .all()
 
 
 class MemberFineRepayment(db.Model):
     __tablename__ = 'member_fine_repayment'
     id = db.Column(db.Integer, primary_key=True)
     amount = db.Column(db.Float)
-    date = db.Column(db.DateTime, default=datetime.utcnow())
+    create_at = db.Column(db.DateTime, default=datetime.utcnow())
     external_transaction_id = db.Column(db.String(30), unique=True)
     operator_transaction_id = db.Column(db.String(30), unique=True)
-    loan_id = db.Column(db.Integer, db.ForeignKey('member_loan.id'), index=True)
+    member_fine_id = db.Column(db.Integer, db.ForeignKey('member_fine.id'), index=True)
 
     def get_url(self):
         return url_for('api.get_member_fine_repayment', id=self.id, _external=True)
+
+    def export_data(self):
+        return {
+            'id': self.id,
+            'amount': self.amount,
+            'create_at': self.create_at,
+            'external_transaction_id': self.external_transaction_id,
+            'operator_transaction_id': self.operator_transaction_id,
+            'member_fine_id': self.member_fine_id
+        }
+
+    def import_data(self, data):
+        try:
+            self.amount = data['amount']
+            self.external_transaction_id = data['external_transaction_id']
+            self.operator_transaction_id = data['operator_transaction_id']
+        except KeyError as e:
+            raise ValidationError('Invalid MemberFineRepayment ' + e.args[0])
+        return self
+
+    @classmethod
+    def fine_balance(cls, member_fine_id):
+        return db.session.query(func.sum(MemberFineRepayment.amount).label('amount'))\
+            .join(MemberFine)\
+            .filter(MemberFineRepayment.member_fine_id == MemberFine.id)\
+            .filter(MemberFineRepayment.member_fine_id == member_fine_id)\
+            .first()[0]
 
 
 class SavingGroupCycle(db.Model):
