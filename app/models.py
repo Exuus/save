@@ -1881,6 +1881,7 @@ class Project(db.Model):
             'donor': self.donor,
             'date': self.date,
             'user_id': self.user_id,
+            'intervention_area': kenessa.ken_filter(self.filter_array(Project.get_intervention_area(self.id))),
             'organization_url': self.organization.get_url(),
             'intervention_area_url': url_for('api.get_project_intervention_area', id=self.id, _external=True),
             'saving_groups_url': url_for('api.get_project_sgs', id=self.id, _external=True),
@@ -1901,6 +1902,21 @@ class Project(db.Model):
             raise ValidationError('Invalid order: missing ' + e.args[0])
         return self
 
+    @staticmethod
+    def filter_array(items):
+        data = list()
+        for item in items:
+            data.append(str(item[0]))
+        return data
+
+    @classmethod
+    def get_intervention_area(cls, project_id):
+        return db.session.query(InterventionArea.village_id)\
+            .join(Project)\
+            .filter(InterventionArea.project_id == Project.id)\
+            .filter(InterventionArea.project_id == project_id)\
+            .all()
+
 
 class ProjectAgent(db.Model):
     __tablename__ = 'project_agent'
@@ -1908,6 +1924,8 @@ class ProjectAgent(db.Model):
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'), index=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
     date = db.Column(db.DateTime, default=datetime.utcnow())
+
+    agent_intervention_area = db.relationship('AgentInterventionArea', bacrkef='project_agent', lazy='dynamic')
 
     def get_url(self):
         return url_for('api.get_project_agent', id=self.id, _external=True)
@@ -1924,6 +1942,32 @@ class ProjectAgent(db.Model):
             self.user_id = data['user_id']
         except KeyError as e:
             raise ValidationError('Invalid ProjectAgent: missing ' + e.args[0])
+        return self
+
+
+class AgentInterventionArea(db.Model):
+    __tablename__ = 'agent_intervention_area'
+    id = db.Column(db.Integer, primary_key=True)
+    village_id = db.Column(db.Integer, index=True, unique=True)
+    project_agent_id = db.Column(db.Integer, db.ForeignKey('project_agent.id'), index=True)
+    create_at = db.Column(db.DateTime, default=datetime.utcnow())
+
+    def get_url(self):
+        return url_for('api.get_agent_intervention', id=self.id, _external=True)
+
+    def export_data(self):
+        return {
+            'id': self.id,
+            'village_id': self.village_id,
+            'project_agent_id': self.project_agent_id,
+            'create_at': self.create_at
+        }
+
+    def import_data(self, village_id):
+        try:
+            self.village_id = int(village_id)
+        except KeyError as e:
+            raise ValidationError('Invalid AgentInterventionArea: missing ' + e.args[0])
         return self
 
 
