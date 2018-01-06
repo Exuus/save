@@ -1,7 +1,7 @@
 from flask import request
 from . import api
 from .. import db
-from ..models import InterventionArea, Village, Project, User
+from ..models import InterventionArea, Project, ProjectAgent, AgentInterventionArea
 from ..decorators import json, paginate, no_cache
 
 
@@ -40,3 +40,16 @@ def edit_invention(id):
     db.session.add(intervention)
     db.session.commit()
     return {}
+
+
+@api.route('/project-agent/<int:id>/intervention-area/', methods=['POST'])
+@json
+def new_project_agent_intervention_area(id):
+    for area in request.json:
+        project_agent = ProjectAgent.query.get_or_404(id)
+        agent_intervention = AgentInterventionArea(project_agent=project_agent)
+        agent_intervention.import_data(area)
+        db.session.add(agent_intervention)
+        db.session.commit()
+
+    return {}, 201
