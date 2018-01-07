@@ -127,3 +127,72 @@ class Kenessa:
             # return(self.c.fetchall())
             v_name = self.c.fetchall()
             return str(list(v_name[0])[0])
+
+    def ken_filter(self, villages):
+        province = list()
+        district = list()
+        sector = list()
+        cell = list()
+
+        data = list()
+        villages = sorted(set(villages))
+        for village in villages:
+            location = self.get_all_from_village_id(village)
+            province.append(location['province']['id'])
+            district.append(location['district']['id'])
+            sector.append(location['sector']['id'])
+            cell.append(location['cell']['id'])
+
+        province = sorted(set(province))
+        district = sorted(set(district))
+        sector = sorted(set(sector))
+        cell = sorted(set(cell))
+
+        for p in province:
+            json_p = dict()
+            json_p['name'] = self.get_name_from_id(p)
+            json_p['id'] = p
+            list_d = list()
+            get_districts = self.get_district(p)
+            for d in district:
+                json_d = dict()
+
+                for get_d in get_districts:
+                    if str(d) == str(get_d['id']):
+                        json_d['name'] = self.get_name_from_id(d)
+                        json_d['id'] = d
+                        list_s = list()
+                        get_sectors = self.get_sector([d])
+                        for s in sector:
+                            json_s = dict()
+                            for get_s in get_sectors:
+                                if str(s) == str(get_s['id']):
+                                    json_s['name'] = self.get_name_from_id(s)
+                                    json_s['id'] = s
+                                    list_c = list()
+                                    get_cells = self.get_cell([s])
+                                    for c in cell:
+                                        json_c = dict()
+                                        for get_c in get_cells:
+                                            if str(c) == str(get_c['id']):
+                                                json_c['name'] = self.get_name_from_id(c)
+                                                json_c['id'] = c
+                                                get_villages = self.get_village([c])
+                                                list_v = list()
+                                                for v in villages:
+                                                    json_v = dict()
+                                                    for get_v in get_villages:
+                                                        if str(v) == str(get_v['id']):
+                                                            json_v['name'] = self.get_name_from_id(v)
+                                                            json_v['id'] = v
+                                                            list_v.append(json_v)
+                                                json_c['village'] = list_v
+                                                list_c.append(json_c)
+                                    json_s['cell'] = list_c
+                                    list_s.append(json_s)
+                        json_d['sector'] = list_s
+                        list_d.append(json_d)
+            json_p['district'] = list_d
+            data.append(json_p)
+
+        return data
