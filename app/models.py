@@ -1925,7 +1925,7 @@ class ProjectAgent(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
     date = db.Column(db.DateTime, default=datetime.utcnow())
 
-    agent_intervention_area = db.relationship('AgentInterventionArea', bacrkef='project_agent', lazy='dynamic')
+    agent_intervention_area = db.relationship('AgentInterventionArea', backref='project_agent', lazy='dynamic')
 
     def get_url(self):
         return url_for('api.get_project_agent', id=self.id, _external=True)
