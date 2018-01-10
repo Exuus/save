@@ -62,7 +62,7 @@ def new_member_fine(id, fine_id):
     return {}, 404
 
 
-@api.route('/fine-repayment/<fine_id>/', methods=['POST'])
+@api.route('/fine-repayment/<int:id>/', methods=['POST'])
 @json
 def new_fine_repayment(id):
     member = SavingGroupMember.query.get_or_404(request.json['member_id'])
@@ -73,7 +73,7 @@ def new_fine_repayment(id):
             else MemberFineRepayment.fine_balance(member_fine.id)
         wallet = SavingGroupWallet.query.get_or_404(member_fine.wallet_id)
 
-        if payed < sg_fines.amount:
+        if payed < sg_fines.fine:
             member_fine_repay = MemberFineRepayment(member_fine=member_fine)
             member_fine_repay.import_data(request.json)
             wallet.credit_wallet(request.json['amount'])
