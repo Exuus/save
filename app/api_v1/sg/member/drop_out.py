@@ -75,8 +75,8 @@ def approve_drop_out(member_id, id):
             admins = SavingGroupMember.count_group_admin(member.saving_group_id)[0]
             drop_out_approved = DropOutApproved.get_approved_drop_out(approved_drop_out.drop_out_id)[0]
 
-            sg_drop_out = SavingGroupDropOut.query.get_or_404(approve_drop_out.drop_out_id)
-            member = SavingGroupMember.query.get_or_404(drop_out.member_id)
+            sg_drop_out = SavingGroupDropOut.query.get_or_404(approved_drop_out.drop_out_id)
+            member = SavingGroupMember.query.get_or_404(sg_drop_out.member_id)
             approval = 0
             if admins == drop_out_approved:
                 approval = 1
