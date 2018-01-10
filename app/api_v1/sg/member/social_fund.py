@@ -111,45 +111,44 @@ def approve_social(member_id, id):
         first()
 
     if member:
-        try:
-            if member.verify_pin(request.json['pin']):
 
-                approved_social = MemberApprovedSocial.query.get_or_404(id)
-                approved_social.approve_social()
-                db.session.add(approved_social)
+        if member.verify_pin(request.json['pin']):
+
+            approved_social = MemberApprovedSocial.query.get_or_404(id)
+            approved_social.approve_social()
+            db.session.add(approved_social)
+            db.session.commit()
+
+            # Wallet
+            wallet = SavingGroupWallet.wallet(member.saving_group_id)
+            wallet_balance = wallet.balance()
+
+            # Social Fund
+            social_fund = MemberSocialFund.query.get_or_404(approved_social.social_debit_id)
+            social_fund_amount = social_fund.social_amount()
+
+            admins = SavingGroupMember.count_group_admin(member.saving_group_id)[0]
+            approve_social_fund = MemberApprovedSocial.get_approved_social_fund(approved_social.social_debit_id)[0]
+            approval = 0
+            if admins == approve_social_fund:
+                approval = 1
+                if social_fund_amount > wallet_balance:
+                    approved_social.pending_social()
+                    db.session.add(approved_social)
+                    db.session.commit()
+                    return {'status': 'Not enough fund!'}, 404
+                wallet.debit_wallet(social_fund_amount)
+                db.session.add(wallet)
                 db.session.commit()
 
-                # Wallet
-                wallet = SavingGroupWallet.wallet(member.saving_group_id)
-                wallet_balance = wallet.balance()
+            return {}, 200, {'Social-Fund-Approval': approval}
 
-                # Social Fund
-                social_fund = MemberSocialFund.query.get_or_404(approve_social.social_debit_id)
-                social_fund_amount = social_fund.social_amount()
-
-                admins = SavingGroupMember.count_group_admin(member.saving_group_id)[0]
-                approve_social_fund = MemberApprovedSocial.get_approved_social_fund(approved_social.social_debit_id)[0]
-                approval = 0
-                if admins == approve_social_fund:
-                    approval = 1
-                    if social_fund_amount > wallet_balance:
-                        approved_social.pending_social()
-                        db.session.add(approved_social)
-                        db.session.commit()
-                        return {'status': 'Not enough fund!'}, 404
-                    wallet.debit_wallet(social_fund_amount)
-                    db.session.add(wallet)
-                    db.session.commit()
-
-                return {}, 200, {'Social-Fund-Approval': approval}
-        except AttributeError:
-            return {}, 200
     return {'status': 'Wrong PIN'}, 404
 
 
 @api.route('/social-fund/<int:id>/transactions-id/', methods=['PUT'])
 @json
-def put_social_fund_transaction_id(id):
+def update_social_fund_transaction_id(id):
     social_fund = MemberSocialFund.query.get_or_404(id)
     social_fund.update_transaction_id(request.json)
     db.session.add(social_fund)
