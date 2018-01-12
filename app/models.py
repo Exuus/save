@@ -74,7 +74,7 @@ class User(db.Model):
     date = db.Column(db.DateTime, default=datetime.utcnow())
     birth_date = db.Column(db.Date)
     gender = db.Column(db.Integer)  # 0 Male # 1 Female
-    key = db.Column(db.String(64))
+    key = db.Column(db.String(128))
     education = db.Column(db.String(64), nullable=True)
     id_number = db.Column(db.String(60), unique=True, nullable=True)
     location = db.Column(db.String(128), default='no location')
@@ -105,6 +105,10 @@ class User(db.Model):
     def generate_sms_key(self):
         self.key = generate_code()
         return self.key
+
+    def set_key(self, key):
+        self.key = key
+        return self
 
     def get_url(self):
         return url_for('api.get_user', id=self.id, _external=True)
