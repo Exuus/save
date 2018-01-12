@@ -131,7 +131,10 @@ def change_user_password(id):
 def recover_user_password(email):
     user = User.query.filter_by(email=email).first()
     if user:
-        key = Email(user.name, user.username, user.email)
+        key = Email(user.name, user.username, user.email).reset_link()
+        user.set_key(key)
+        db.session.add(user)
+        db.session.commit()
         return {}, 200
     return {}, 404
 
