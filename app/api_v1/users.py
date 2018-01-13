@@ -1,7 +1,7 @@
 from flask import request, jsonify
 from . import api
 from .. import db
-from ..models import User, Organization, SavingGroupMember
+from ..models import User, Organization, SavingGroupMember, and_
 from ..decorators import json, paginate, no_cache
 from sqlalchemy.exc import IntegrityError
 from ..errorhandlers import internal_server_error
@@ -27,11 +27,15 @@ def get_user(id):
 @json
 def get_users_members(phone):
     user = User.query.\
-        filter(User.phone == phone)\
+        filter_by(phone=phone)\
         .first()
     if user:
-        return SavingGroupMember.query.\
-            filter(SavingGroupMember.user_id == user.id).first()
+        member = SavingGroupMember.query.\
+            filter_by(user_id=user.id).\
+            filter_by(activate=1).\
+            first()
+        if member:
+            return member
     return {}, 404
 
 
