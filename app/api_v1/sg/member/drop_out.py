@@ -81,10 +81,10 @@ def approve_drop_out(member_id, id):
             if admins == drop_out_approved:
                 approval = 1
             return {}, 200, {
-                                'Drop-Out-Approval': approval,
-                                'Location': member.get_member_share_out(),
-                                'drop_out_id': sg_drop_out.id
-                             }
+                'Drop-Out-Approval': approval,
+                'Location': member.get_member_share_out(),
+                'drop_out_id': sg_drop_out.id
+            }
 
             # Remain headers Location for member share out
             # drop out id to the headers
@@ -98,6 +98,9 @@ def approve_drop_out(member_id, id):
 @json
 def get_member_share_out_drop_out(id):
     member = SavingGroupMember.query.get_or_404(id)
+    member.active()
+    db.session.add(member)
+    db.session.commit()
     if member.activate == 1:
         if SavingGroupShareOut.member_share_out(member) is False:
             return {}, 404
@@ -152,8 +155,12 @@ def new_member_drop_share_out(id):
     sg_drop_out = SavingGroupDropOut.query.get_or_404(request.json['drop_out_id'])
     drop_share_out = DropOutShareOut(sg_member=member, sg_drop_out=sg_drop_out)
     drop_share_out.import_data(request.json)
+    member.drop_out()
+    db.session.add(member)
     db.session.add(drop_share_out)
     db.session.commit()
     return {}, 201
+
+
 
 
