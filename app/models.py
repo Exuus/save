@@ -568,8 +568,8 @@ class SavingGroupShareOut(db.Model):
         json['percentage_share'] = (json['saving'] / total_savings) * 100
         json['share_out_amount'] = int((json['percentage_share'] * balance) / 100)
 
-        member.drop_out()
-        db.session.add(member)
+        # member.drop_out()
+        # db.session.add(member)
         wallet.debit_wallet(json['share_out_amount'])
         db.session.add(wallet)
         db.session.commit()
@@ -1576,6 +1576,9 @@ class SavingGroupMember(db.Model):
     def drop_out(self):
         self.activate = 0
 
+    def active(self):
+        self.activate = 1
+
     @classmethod
     def group_admin(cls, saving_group_id):
         return SavingGroupMember.query.\
@@ -1712,6 +1715,11 @@ class DropOutShareOut(db.Model):
             self.operator_transaction_id = data['operator_transaction_id']
         except KeyError as e:
             raise ValidationError('Invalid Drop out approved ' + e.args[0])
+        return self
+
+    def update_transaction_id(self, data):
+        self.operator_transaction_id = data['operator_transaction_id']
+        self.external_transaction_id = data['external_transaction_id']
         return self
 
 
