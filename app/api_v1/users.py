@@ -197,7 +197,7 @@ def check_user_national_id(id_number):
 def check_user_phone(phone):
     user = User.query.filter_by(phone=phone).first()
     if user:
-        return {}, 200
+        return user
     return {}, 404
 
 
@@ -206,6 +206,6 @@ def check_user_phone(phone):
 def check_user_email(email):
     user = User.query.filter_by(email=email).first()
     if user:
-        return {}, 200
+        return user
     return {}, 404
 
