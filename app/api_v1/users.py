@@ -70,17 +70,19 @@ def new_user(id):
     user = User(organization=organization)
     user.import_data(request.json)
     user.set_password(request.json['password'])
-    try:
+
+    db.session.add(user)
+    db.session.commit()
+
+    if request.json['type'] == 2:
+        save_sms(request.json['phone'], user.confirmation_code)
+    if request.json['type'] == 1:
+        key = Email(user.name, user.username, user.email).reset_link()
+        user.set_key(key)
         db.session.add(user)
         db.session.commit()
 
-        if request.json['type'] == 2:
-            save_sms(request.json['phone'], user.confirmation_code)
-
-        return user
-    except IntegrityError:
-        db.session.rollback()
-        return internal_server_error()
+    return user
 
 
 @api.route('/login/', methods=['POST'])
@@ -124,6 +126,7 @@ def change_user_password(id):
     user = User.query.get_or_404(id)
     if user.verify_password(request.json['password']):
         user.set_password(request.json['new_password'])
+        Email(user.name, user.username, user.email).resetsuccess()
         db.session.add(user)
         db.session.commit()
         return {}, 200
