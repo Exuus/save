@@ -7,6 +7,7 @@ from ...models import SavingGroup, SavingGroupMember, SavingGroupWallet, \
 from ...decorators import json, paginate, no_cache
 from sqlalchemy.exc import IntegrityError
 from ...errorhandlers import internal_server_error
+from ...save_sms import new_member_sms
 
 
 @api.route('/sg/<int:id>/', methods=['GET'])
@@ -103,6 +104,7 @@ def get_sg_members(id):
 @api.route('/sg/<int:id>/members/', methods=['POST'])
 @json
 def new_sg_member(id):
+    user = User.query.get_or_404(request.json['user_id'])
     saving_group = SavingGroup.query.get_or_404(id)
     cycle = SavingGroupCycle.current_cycle(id)
     member = SavingGroupMember(saving_group=saving_group)
@@ -111,6 +113,9 @@ def new_sg_member(id):
     db.session.add(member)
     db.session.add(member_cycle)
     db.session.commit()
+
+    new_member_sms(saving_group.name, user.name, user.phone)
+
     return {}, 201, {'Location': member.get_url()}
 
 
