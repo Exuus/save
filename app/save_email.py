@@ -22,7 +22,21 @@ class Email:
         content = '<div style=padding-left:20px;width:100%;background-color:#fff>' \
                   '<div style=margin-left:0;padding-top:50px;padding-bottom:20px>' \
                   '<img src={logo} style=margin-left:-10px;margin-top:20px;height:40px>' \
-                  '<p style=font-family:sans-serif;margin-left:0;padding-top:15px;color:#424242>Hallo <span style=font-weight:700>{names},</span><p style=font-family:sans-serif;margin-left:0;color:#424242>Welcome to Cartix<p style=font-family:sans-serif;margin-left:0;color:#424242>- Your Username: {username}<br>- Sign in here : {link}<p style=font-family:sans-serif;margin-left:0;color:#424242>{footer}</div></div><div style=padding-left:20px;width:100%;padding-top:5px;background-color:#FAFAFA><div style=margin-left:0px;margin-top:10px;margin-bottom:10px;><span style=font-family:sans-serif;font-size:12px;margin-left:0;color:#424242>You\'re receiving this message because you are a cartix user send us feedback on info@cartix.io or call us +250785489992</span><p style=font-family:sans-serif;font-size:12px;margin-left:0;color:#424242>Cartix is a product of <a href=http://www.exuus.com target=_blank>exuus Ltd.</a><br>Exuus is a limited corporation registered in Republic of Rwanda.</p></div></div>'.format(names=self.names, username=self.username, link=self.login, footer=self.footer, logo=self.logo)
+                  '<p style=font-family:sans-serif;margin-left:0;padding-top:15px;color:#424242>' \
+                  'Hallo <span style=font-weight:700>{names},</span>' \
+                  '<p style=font-family:sans-serif;margin-left:0;color:#424242>' \
+                  'Welcome to Save<p style=font-family:sans-serif;margin-left:0;color:#424242>' \
+                  '- Your Username: {username}<br>- Sign in here to change password : {link}' \
+                  '<p style=font-family:sans-serif;margin-left:0;color:#424242>{footer}</div></div>' \
+                  '<div style=padding-left:20px;width:100%;padding-top:5px;background-color:#FAFAFA>' \
+                  '<div style=margin-left:0px;margin-top:10px;margin-bottom:10px;>' \
+                  '<span style=font-family:sans-serif;font-size:12px;margin-left:0;color:#424242>' \
+                  'You\'re receiving this message because you are a Save user send us feedback on ' \
+                  'info@getsave.io or call us +250785489992</span>' \
+                  '<p style=font-family:sans-serif;font-size:12px;margin-left:0;color:#424242>' \
+                  'Save is a product of <a href=http://www.exuus.com target=_blank>exuus Ltd.</a>' \
+                  '<br>Exuus is a limited corporation registered in Republic of Rwanda.</p></div></div>'\
+            .format(names=self.names, username=self.username, link=self.recover, footer=self.footer, logo=self.logo)
         msg.html = """ {content} """.format(content=content)
         mail.send(msg)
         return True
@@ -46,7 +60,7 @@ class Email:
                   "background-color:#FAFAFA><div style=margin-left:0;margin-top:10px;margin-bottom:10px>" \
                   "<span style=font-family:sans-serif;font-size:12px;margin-left:0;color:#424242>" \
                   "You\'re receiving this message because you are a save user send us " \
-                  "feedback on info@cartix.io or call us +250785489992</span>" \
+                  "feedback on info@getsave.io or call us +250785489992</span>" \
                   "<p style=font-family:sans-serif;font-size:12px;margin-left:0;" \
                   "color:#424242>Save is a product of " \
                   "<a href=http://www.exuus.com target=_blank>exuus Ltd.</a>" \
@@ -59,10 +73,10 @@ class Email:
 
     def resetsuccess(self):
 
-        msg = Message('Password reset successful', sender='Cartix Team', recipients=[self.email])
+        msg = Message('Password reset successful', sender='Save Team', recipients=[self.email])
         content = "<div style=padding-left:20px;width:100%;background-color:#fff>" \
                   "<div style=margin-left:0;padding-top:50px;padding-bottom:20px>" \
-                  "<img src={logo} style=margin-left:-10px;margin-top:20px;height:40px><p style=font-family:sans-serif;margin-left:0;padding-top:15px;color:#424242>Hallo <span style=font-weight:700>{names},</span><p style=font-family:sans-serif;margin-left:0;color:#424242>Welcome to Cartix<p style=font-family:sans-serif;margin-left:0;color:#424242>You've successfully changed your Cartix password.<br>{link}<p style=font-family:sans-serif;margin-left:0;color:#424242>{footer}</div></div><div style=padding-left:20px;width:100%;padding-top:5px;background-color:#FAFAFA><div style=margin-left:0;margin-top:10px;margin-bottom:10px><span style=font-family:sans-serif;font-size:12px;margin-left:0;color:#424242>You\'re receiving this message because you are a cartix user send us feedback on info@cartix.io or call us +250785489992</span><p style=font-family:sans-serif;font-size:12px;margin-left:0;color:#424242>Cartix is a product of <a href=http://www.exuus.com target=_blank>exuus Ltd.</a><br>Exuus is a limited corporation registered in Republic of Rwanda.</div></div>".format(
+                  "<img src={logo} style=margin-left:-10px;margin-top:20px;height:40px><p style=font-family:sans-serif;margin-left:0;padding-top:15px;color:#424242>Hallo <span style=font-weight:700>{names},</span><p style=font-family:sans-serif;margin-left:0;color:#424242>Welcome to Savetix<p style=font-family:sans-serif;margin-left:0;color:#424242>You've successfully changed your Save password.<br>{link}<p style=font-family:sans-serif;margin-left:0;color:#424242>{footer}</div></div><div style=padding-left:20px;width:100%;padding-top:5px;background-color:#FAFAFA><div style=margin-left:0;margin-top:10px;margin-bottom:10px><span style=font-family:sans-serif;font-size:12px;margin-left:0;color:#424242>You\'re receiving this message because you are a Save user send us feedback on info@getsave.io or call us +250785489992</span><p style=font-family:sans-serif;font-size:12px;margin-left:0;color:#424242>Save is a product of <a href=http://www.exuus.com target=_blank>exuus Ltd.</a><br>Exuus is a limited corporation registered in Republic of Rwanda.</div></div>".format(
             names=self.names, link=self.login, footer=self.footer, logo=self.logo)
         msg.html = """ {content} """.format(content=content)
         mail.send(msg)
@@ -83,8 +97,8 @@ def help(names, email, title, message):
               '<p style=font-family:sans-serif;margin-left:0;color:#424242>{footer}</div></div>' \
               '<div style=padding-left:20px;width:100%;padding-top:5px;background-color:#FAFAFA>' \
               '<div style=margin-left:0px;margin-top:10px;margin-bottom:10px;>' \
-              '<span style=font-family:sans-serif;font-size:12px;margin-left:0;color:#424242>You\'re receiving this message because you are a cartix user send us feedback on info@cartix.io or call us +250785489992</span>' \
-              '<p style=font-family:sans-serif;font-size:12px;margin-left:0;color:#424242>Cartix is a product of <a href=http://www.exuus.com target=_blank>exuus Ltd.</a>' \
+              '<span style=font-family:sans-serif;font-size:12px;margin-left:0;color:#424242>You\'re receiving this message because you are a Save user send us feedback on info@getsave.io or call us +250785489992</span>' \
+              '<p style=font-family:sans-serif;font-size:12px;margin-left:0;color:#424242>Save is a product of <a href=http://www.exuus.com target=_blank>exuus Ltd.</a>' \
               '<br>Exuus is a limited corporation registered in Republic of Rwanda.</p></div></div>'.format(names=names, title=title, message=message, footer=footer, logo=logo)
     msg.html = """ {content} """.format(content=content)
     mail.send(msg)
