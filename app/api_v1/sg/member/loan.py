@@ -76,19 +76,16 @@ def get_admin_pending_loan(id):
 @json
 def get_member_loan(id):
     member = SavingGroupMember.query.get_or_404(id)
-    try:
-        loan = MemberLoan.query\
-            .filter_by(sg_member_id=member.id)\
-            .order_by(MemberLoan.date_payment.desc())\
-            .first()
-        status = MemberLoan.loan_status(loan.id, member.saving_group_id)
-        loan = MemberLoan.get_loan_balance(loan)
-        if not status:
-            loan['status'] = 'pending'
-            return loan
+    loan = MemberLoan.query\
+        .filter_by(sg_member_id=member.id)\
+        .order_by(MemberLoan.date_payment.desc())\
+        .first()
+    status = MemberLoan.loan_status(loan.id, member.saving_group_id)
+    loan = MemberLoan.get_loan_balance(loan)
+    if not status:
+        loan['status'] = 'pending'
         return loan
-    except AttributeError:
-        return {}, 404
+    return loan
 
 
 @api.route('/member/<int:id>/loan/', methods=['POST'])
