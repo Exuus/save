@@ -776,7 +776,7 @@ class MemberLoan(db.Model):
     __tablename__ = 'member_loan'
     id = db.Column(db.Integer, primary_key=True)
     amount_loaned = db.Column(db.Float)
-    request_date = db.Column(db.DateTime, default=datetime.utcnow())
+    request_date = db.Column(db.DateTime, default=datetime.utcnow)
     interest_rate = db.Column(db.Integer)
     initial_date_repayment = db.Column(db.Integer)
     date_payment = db.Column(db.DateTime)
@@ -932,7 +932,7 @@ class MemberLoan(db.Model):
                 'delays': 0
             }
 
-        days = (self.date_payment - repayment_date).days
+        days = (self.date_payment - repayment_date).days + 1
         fine = days * fine_rate
         return {
             'amount': fine,
