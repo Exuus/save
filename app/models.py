@@ -782,6 +782,7 @@ class MemberLoan(db.Model):
     date_payment = db.Column(db.DateTime)
     payment_type = db.Column(db.Integer)  # 0 Write-off | 1 Self-payed | 2 not payed | 3 Decline
     write_off_admin = db.Column(db.Integer)
+    approved_date = db.Column(db.DateTime)
     external_transaction_id = db.Column(db.String(30), unique=True)
     operator_transaction_id = db.Column(db.String(30), unique=True)
     sg_cycle_id = db.Column(db.Integer, db.ForeignKey('sg_cycle.id'), index=True)
@@ -813,7 +814,6 @@ class MemberLoan(db.Model):
             self.amount_loaned = data['amount_loaned']
             self.interest_rate = data['interest_rate']
             self.initial_date_repayment = data['initial_date_repayment']
-
         except KeyError as e:
             raise ValidationError('Invalid sg_debit_loan' + e.args[0])
         return self
@@ -821,6 +821,7 @@ class MemberLoan(db.Model):
     def update_transaction_id(self, data):
         self.operator_transaction_id = data['operator_transaction_id']
         self.external_transaction_id = data['external_transaction_id']
+        self.approved_date = datetime.utcnow()
         return self
 
     def date_repayment(self):
@@ -858,11 +859,12 @@ class MemberLoan(db.Model):
             'date_payment': loan.date_payment,
             'payment_type': loan.write_of_or_self_payed(),
             'request_date': loan.request_date,
+            'approved_date': loan.approved_date,
             'initial_loan_plus_interest': initial_loan_interest,
             'total_loan_interest_plus_fine': total_to_pay,
             'fine': loan.calculate_fine(),
             'expect_date_repayment': loan.request_date + timedelta(days=loan.initial_date_repayment),
-            "wallet_id": loan.sg_wallet_id,
+            'wallet_id': loan.sg_wallet_id,
             'amount_loaned': loan.amount_loaned
         }
 
@@ -909,34 +911,40 @@ class MemberLoan(db.Model):
         return cls
 
     def calculate_fine(self):
-        repayment_date = self.request_date + timedelta(days=self.initial_date_repayment)
-        interest = self.amount_loaned * self.interest_rate / 100
-        fine_rate = interest/self.initial_date_repayment
+        if self.approved_date:
+            repayment_date = self.approved_date + timedelta(days=self.initial_date_repayment)
+            interest = self.amount_loaned * self.interest_rate / 100
+            fine_rate = interest/self.initial_date_repayment
 
-        if (datetime.now() > repayment_date) & (self.date_payment is None):
-            days = (arrow.utcnow() - arrow.get(repayment_date)).days + 1
+            if (datetime.now() > repayment_date) & (self.date_payment is None):
+                days = (arrow.utcnow() - arrow.get(repayment_date)).days + 1
+                fine = days * fine_rate
+                return {
+                    'amount': fine,
+                    'delays': days
+                }
+            elif (datetime.now() <= repayment_date) & (self.date_payment is None):
+                return {
+                    'amount': 0,
+                    'delays': 0
+                }
+            elif (self.date_payment is not None) & (datetime.now() <= repayment_date):
+
+                return {
+                    'amount': 0,
+                    'delays': 0
+                }
+
+            days = (self.date_payment - repayment_date).days + 1
             fine = days * fine_rate
             return {
                 'amount': fine,
                 'delays': days
             }
-        elif (datetime.now() <= repayment_date) & (self.date_payment is None):
-            return {
-                'amount': 0,
-                'delays': 0
-            }
-        elif (self.date_payment is not None) & (datetime.now() <= repayment_date):
 
-            return {
-                'amount': 0,
-                'delays': 0
-            }
-
-        days = (self.date_payment - repayment_date).days + 1
-        fine = days * fine_rate
         return {
-            'amount': fine,
-            'delays': days
+            'amount': 0,
+            'delays': 0
         }
 
     @classmethod
