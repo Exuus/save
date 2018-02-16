@@ -10,7 +10,6 @@ from .errorhandlers import bad_request, forbidden, not_found, method_not_support
 from raven.contrib.flask import Sentry
 from kenessa import Kenessa
 
-
 # local imports
 from config import app_config
 
