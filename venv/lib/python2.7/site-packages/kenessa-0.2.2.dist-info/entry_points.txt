@@ -1,3 +1,0 @@
-[console_scripts]
-kenessa-province = kenessa.command_line:main
-
